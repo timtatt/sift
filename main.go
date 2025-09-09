@@ -71,24 +71,26 @@ type TestReference struct {
 	Test    string
 }
 
-type TestTreeNode struct {
+type TestNode struct {
 	Ref     TestReference
 	Status  string // pass, fail, run
 	Toggled bool
 }
 
 type model struct {
-	tests    []TestTreeNode
+	tests    []TestNode
 	testLogs map[TestReference]string
 	testLock sync.Mutex
 
-	cursor int
+	cursor    int
+	startTime time.Time
 }
 
 func initialModel() model {
 	return model{
-		tests:    make([]TestTreeNode, 0),
-		testLogs: make(map[TestReference]string),
+		tests:     make([]TestNode, 0),
+		testLogs:  make(map[TestReference]string),
+		startTime: time.Now(),
 	}
 }
 
@@ -115,7 +117,7 @@ func (m *model) AddTest(testOutput TestOutputLine) {
 	case "run":
 		m.testLock.Lock()
 
-		m.tests = append(m.tests, TestTreeNode{
+		m.tests = append(m.tests, TestNode{
 			Ref:     testRef,
 			Status:  "run",
 			Toggled: false,
@@ -125,7 +127,7 @@ func (m *model) AddTest(testOutput TestOutputLine) {
 	case "pass", "fail":
 		m.testLock.Lock()
 
-		testIdx := slices.IndexFunc(m.tests, func(t TestTreeNode) bool {
+		testIdx := slices.IndexFunc(m.tests, func(t TestNode) bool {
 			return t.Ref == testRef
 		})
 		if testIdx > -1 {
@@ -181,13 +183,14 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 var (
-	greenText = lipgloss.NewStyle().
+	iconStyle = lipgloss.NewStyle().Bold(true)
+	greenText = iconStyle.
 			Foreground(lipgloss.Color("28"))
 
-	redText = lipgloss.NewStyle().
+	redText = iconStyle.
 		Foreground(lipgloss.Color("161"))
 
-	orangeText = lipgloss.NewStyle().
+	orangeText = iconStyle.
 			Foreground(lipgloss.Color("214"))
 
 	dimmed = lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
@@ -195,18 +198,66 @@ var (
 	highlightedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("229")).Background(lipgloss.Color("25"))
 )
 
+type TestSummary struct {
+	Passed  int
+	Failed  int
+	Running int
+}
+
+type Summary struct {
+	packages map[string]TestSummary
+	total    TestSummary
+}
+
+func (s *Summary) AddPackage(pkg string, status string) {
+	ps, ok := s.packages[pkg]
+	if !ok {
+		ps = TestSummary{}
+	}
+
+	switch status {
+	case "pass":
+		s.total.Passed++
+		ps.Passed++
+	case "fail":
+		s.total.Failed++
+		ps.Failed++
+	case "run":
+		s.total.Running++
+		ps.Running++
+	}
+
+	s.packages[pkg] = ps
+}
+
+func (s *Summary) Total() TestSummary {
+	return s.total
+}
+
+func (s *Summary) PackageSummary() TestSummary {
+	ps := TestSummary{}
+	for _, p := range s.packages {
+		ps.Passed += p.Passed
+		ps.Failed += p.Failed
+		ps.Running += p.Running
+	}
+	return ps
+}
+
 func (m *model) View() string {
 	s := ""
+
+	summary := Summary{
+		packages: make(map[string]TestSummary),
+	}
 
 	// Iterate over our choices
 	for i, test := range m.tests {
 
 		highlighted := m.cursor == i
 
-		// Is this choice selected?
-		// checked := " " // not selected
-
 		var statusIcon string
+		summary.AddPackage(test.Ref.Package, test.Status)
 		switch test.Status {
 		case "run":
 			statusIcon = orangeText.Render("\u2022")
@@ -240,9 +291,51 @@ func (m *model) View() string {
 			if ok {
 				s += fmt.Sprintf("   %s\n", log)
 			}
-
 		}
 	}
+
+	// print summary
+
+	s += "\n"
+
+	ps := summary.PackageSummary()
+
+	s += dimmed.Render(" Packages ")
+	if ps.Passed > 0 {
+		s += greenText.Bold(true).Render(fmt.Sprintf("%d passed ", ps.Passed))
+	}
+
+	if ps.Failed > 0 {
+		s += redText.Bold(true).Render(fmt.Sprintf("%d failed ", ps.Failed))
+	}
+
+	if ps.Running > 0 {
+		s += dimmed.Render(fmt.Sprintf("%d running ", ps.Running))
+	}
+	s += dimmed.Render(fmt.Sprintf("(%d)\n", ps.Passed+ps.Failed+ps.Running))
+
+	s += dimmed.Render("    Tests ")
+	total := summary.Total()
+
+	if total.Passed > 0 {
+		s += greenText.Bold(true).Render(fmt.Sprintf("%d passed ", total.Passed))
+	}
+
+	if total.Failed > 0 {
+		s += redText.Bold(true).Render(fmt.Sprintf("%d failed ", total.Failed))
+	}
+
+	if total.Running > 0 {
+		s += dimmed.Render(fmt.Sprintf("%d running ", total.Running))
+	}
+
+	s += dimmed.Render(fmt.Sprintf("(%d)\n", total.Passed+total.Failed+total.Running))
+
+	s += dimmed.Render(" Start At ")
+	s += m.startTime.Format(time.TimeOnly)
+	s += "\n"
+
+	s += "\n"
 
 	// Send the UI for rendering
 	return s
