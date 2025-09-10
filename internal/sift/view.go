@@ -2,20 +2,18 @@ package sift
 
 import (
 	"fmt"
-	"slices"
-	"sync"
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/timtatt/sift/internal/tests"
 )
 
 type siftModel struct {
-	tests    []*TestNode
-	testLogs map[TestReference]string
-	testLock sync.Mutex
+	testManager  *tests.TestManager
+	toggledTests map[tests.TestReference]bool
 
 	cursor    int
 	startTime time.Time
@@ -25,72 +23,15 @@ type siftModel struct {
 	windowSize tea.WindowSizeMsg
 }
 
-type TestOutputLine struct {
-	Time    time.Time `json:"time"`
-	Action  string    `json:"action"`
-	Package string    `json:"package"`
-	Test    string    `json:"test,omitempty"`
-	Elapsed float64   `json:"elapsed,omitempty"`
-	Output  string    `json:"output,omitempty"`
+func NewSiftModel() *siftModel {
+	return &siftModel{
+		testManager:  tests.NewTestManager(),
+		toggledTests: make(map[tests.TestReference]bool),
+		startTime:    time.Now(),
+	}
 }
 
 type TestsUpdatedMsg struct{}
-
-type TestReference struct {
-	Package string
-	Test    string
-}
-
-type TestNode struct {
-	Ref     TestReference
-	Status  string // pass, fail, run
-	Toggled bool
-}
-
-func (m *siftModel) AddTest(testOutput TestOutputLine) {
-	testRef := TestReference{
-		Package: testOutput.Package,
-		Test:    testOutput.Test,
-	}
-
-	switch testOutput.Action {
-	case "output":
-		// TODO: maybe use a different lock
-		m.testLock.Lock()
-
-		_, ok := m.testLogs[testRef]
-
-		if !ok {
-			m.testLogs[testRef] = testOutput.Output
-		} else {
-			m.testLogs[testRef] += testOutput.Output
-		}
-
-		m.testLock.Unlock()
-	case "run":
-		m.testLock.Lock()
-
-		m.tests = append(m.tests, &TestNode{
-			Ref:     testRef,
-			Status:  "run",
-			Toggled: false,
-		})
-
-		m.testLock.Unlock()
-	case "pass", "fail":
-		m.testLock.Lock()
-
-		testIdx := slices.IndexFunc(m.tests, func(t *TestNode) bool {
-			return t.Ref == testRef
-		})
-		if testIdx > -1 {
-			m.tests[testIdx].Status = testOutput.Action
-		}
-
-		m.testLock.Unlock()
-	}
-
-}
 
 func (m *siftModel) Init() tea.Cmd {
 	// Just return `nil`, which means "no I/O right now, please."
@@ -127,35 +68,29 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewport.Width = msg.Width
 		}
 	case tea.KeyMsg:
-
-		// Cool, what was the actual key pressed?
 		switch msg.String() {
 		// TODO: change this keymap
 		case "a":
-			for _, test := range m.tests {
-				test.Toggled = true
+			for _, test := range m.testManager.GetTests {
+				m.toggledTests[test.Ref] = true
 			}
-
-		// These keys should exit the program.
 		case "ctrl+c", "q":
 			return m, tea.Quit
-
-		// The "up" and "k" keys move the cursor up
 		case "up", "k":
 			if m.cursor > 0 {
 				m.cursor--
 			}
-
-		// The "down" and "j" keys move the cursor down
 		case "down", "j":
-			if m.cursor < len(m.tests)-1 {
+			if m.cursor < m.testManager.GetTestCount()-1 {
 				m.cursor++
 			}
-
-		// The "enter" key and the spacebar (a literal space) toggle
-		// the selected state for the item that the cursor is pointing at.
 		case "enter", " ":
-			m.tests[m.cursor].Toggled = !m.tests[m.cursor].Toggled
+			test := m.testManager.GetTest(m.cursor)
+
+			if test != nil {
+				m.toggledTests[test.Ref] = !m.toggledTests[test.Ref]
+			}
+
 		}
 	}
 
@@ -261,7 +196,7 @@ func (m *siftModel) testView() (string, Summary) {
 		packages: make(map[string]TestSummary),
 	}
 
-	for i, test := range m.tests {
+	for i, test := range m.testManager.GetTests {
 
 		highlighted := m.cursor == i
 
@@ -286,12 +221,8 @@ func (m *siftModel) testView() (string, Summary) {
 		s += fmt.Sprintf(" %s %s\n", statusIcon, testName)
 
 		// print the logs
-		if test.Toggled {
-			m.testLock.Lock()
-
-			log, ok := m.testLogs[test.Ref]
-
-			m.testLock.Unlock()
+		if m.toggledTests[test.Ref] {
+			log, ok := m.testManager.GetLogs(test.Ref)
 
 			if !highlighted {
 				log = dimmed.Render(log)

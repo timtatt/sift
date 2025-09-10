@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/timtatt/sift/internal/tests"
 )
 
 type sift struct {
@@ -20,7 +20,7 @@ func (s *sift) ScanStdin() error {
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for scanner.Scan() {
-		var line TestOutputLine
+		var line tests.TestOutputLine
 
 		err := json.Unmarshal(scanner.Bytes(), &line)
 		if err != nil {
@@ -28,7 +28,7 @@ func (s *sift) ScanStdin() error {
 			continue
 		}
 
-		s.model.AddTest(line)
+		s.model.testManager.AddTestOutput(line)
 		s.program.Send(TestsUpdatedMsg{})
 	}
 
@@ -44,12 +44,7 @@ func Run(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	m := &siftModel{
-		tests:     make([]*TestNode, 0),
-		testLogs:  make(map[TestReference]string),
-		startTime: time.Now(),
-	}
-
+	m := NewSiftModel()
 	p := tea.NewProgram(
 		m,
 		tea.WithFPS(24),
