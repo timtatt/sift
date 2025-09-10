@@ -8,8 +8,10 @@ import (
 
 type TestManager struct {
 	tests    []*TestNode
-	testLogs map[TestReference]string
 	testLock sync.RWMutex
+
+	testLogs    map[TestReference]string
+	testLogLock sync.RWMutex
 }
 
 type TestReference struct {
@@ -40,8 +42,8 @@ func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
 
 	switch testOutput.Action {
 	case "output":
-		// TODO: maybe use a different lock
-		tm.testLock.Lock()
+		tm.testLogLock.Lock()
+		defer tm.testLogLock.Unlock()
 
 		_, ok := tm.testLogs[testRef]
 
@@ -51,18 +53,17 @@ func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
 			tm.testLogs[testRef] += testOutput.Output
 		}
 
-		tm.testLock.Unlock()
 	case "run":
 		tm.testLock.Lock()
+		defer tm.testLock.Unlock()
 
 		tm.tests = append(tm.tests, &TestNode{
 			Ref:    testRef,
 			Status: "run",
 		})
-
-		tm.testLock.Unlock()
 	case "pass", "fail":
 		tm.testLock.Lock()
+		defer tm.testLock.Unlock()
 
 		testIdx := slices.IndexFunc(tm.tests, func(t *TestNode) bool {
 			return t.Ref == testRef
@@ -70,8 +71,6 @@ func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
 		if testIdx > -1 {
 			tm.tests[testIdx].Status = testOutput.Action
 		}
-
-		tm.testLock.Unlock()
 	}
 }
 
@@ -106,8 +105,8 @@ func (tm *TestManager) GetTestCount() int {
 }
 
 func (tm *TestManager) GetLogs(testRef TestReference) (string, bool) {
-	tm.testLock.RLock()
-	defer tm.testLock.RUnlock()
+	tm.testLogLock.RLock()
+	defer tm.testLogLock.RUnlock()
 
 	log, ok := tm.testLogs[testRef]
 
