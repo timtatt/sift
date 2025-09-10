@@ -142,6 +142,8 @@ var (
 	dimmed = lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
 
 	highlightedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("229")).Background(lipgloss.Color("25"))
+
+	logStyle = lipgloss.NewStyle().PaddingLeft(4)
 )
 
 type TestSummary struct {
@@ -235,7 +237,7 @@ func (m *siftModel) View() string {
 			}
 
 			if ok {
-				s += fmt.Sprintf("   %s\n", log)
+				s += logStyle.Render(log) + "\n"
 			}
 		}
 	}
@@ -244,9 +246,11 @@ func (m *siftModel) View() string {
 
 	s += "\n"
 
+	summaryLabel := dimmed.Width(10).Align(lipgloss.Right).PaddingLeft(1).PaddingRight(1)
+
 	ps := summary.PackageSummary()
 
-	s += dimmed.Render(" Packages ")
+	s += summaryLabel.Render("Packages")
 	if ps.Passed > 0 {
 		s += greenText.Bold(true).Render(fmt.Sprintf("%d passed ", ps.Passed))
 	}
@@ -258,9 +262,10 @@ func (m *siftModel) View() string {
 	if ps.Running > 0 {
 		s += dimmed.Render(fmt.Sprintf("%d running ", ps.Running))
 	}
-	s += dimmed.Render(fmt.Sprintf("(%d)\n", ps.Passed+ps.Failed+ps.Running))
+	s += dimmed.Render(fmt.Sprintf("(%d)", ps.Passed+ps.Failed+ps.Running))
+	s += "\n"
 
-	s += dimmed.Render("    Tests ")
+	s += summaryLabel.Render("Tests")
 	total := summary.Total()
 
 	if total.Passed > 0 {
@@ -275,9 +280,10 @@ func (m *siftModel) View() string {
 		s += dimmed.Render(fmt.Sprintf("%d running ", total.Running))
 	}
 
-	s += dimmed.Render(fmt.Sprintf("(%d)\n", total.Passed+total.Failed+total.Running))
+	s += dimmed.Render(fmt.Sprintf("(%d)", total.Passed+total.Failed+total.Running))
+	s += "\n"
 
-	s += dimmed.Render(" Start At ")
+	s += summaryLabel.Render("Start At")
 	s += m.startTime.Format(time.TimeOnly)
 	s += "\n"
 
