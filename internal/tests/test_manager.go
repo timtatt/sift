@@ -20,8 +20,9 @@ type TestReference struct {
 }
 
 type TestNode struct {
-	Ref    TestReference
-	Status string // pass, fail, run
+	Ref     TestReference
+	Elapsed time.Duration
+	Status  string // pass, fail, run
 }
 
 // JSON output from `go test -json`
@@ -69,7 +70,10 @@ func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
 			return t.Ref == testRef
 		})
 		if testIdx > -1 {
-			tm.tests[testIdx].Status = testOutput.Action
+			test := tm.tests[testIdx]
+
+			test.Status = testOutput.Action
+			test.Elapsed = time.Duration(float64(time.Second) * testOutput.Elapsed)
 		}
 	}
 }

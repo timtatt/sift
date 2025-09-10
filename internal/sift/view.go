@@ -18,6 +18,8 @@ type siftModel struct {
 
 	cursor    int
 	startTime time.Time
+	endTime   time.Time
+
 	ready     bool
 	viewport  viewport.Model
 	keyBuffer []string
@@ -35,8 +37,6 @@ func NewSiftModel() *siftModel {
 		startTime:    time.Now(),
 	}
 }
-
-type TestsUpdatedMsg struct{}
 
 func (m *siftModel) Init() tea.Cmd {
 	// initialise key ring buffer with size 2
@@ -229,8 +229,17 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 			testName = highlightedStyle.Render(test.Ref.Test)
 		}
 
+		elapsed := ""
+		if test.Status != "run" {
+			elapsed = dimmed.Render(
+				fmt.Sprintf("(%.2fs)", test.Elapsed.Seconds()),
+			)
+		}
+
 		// Render the row
-		s += fmt.Sprintf(" %s %s\n", statusIcon, testName)
+		s += fmt.Sprintf(" %s %s %s", statusIcon, testName, elapsed)
+
+		s += "\n"
 
 		// print the logs
 		if m.toggledTests[test.Ref] {
@@ -291,6 +300,16 @@ func (m *siftModel) summaryView(summary *tests.Summary) string {
 
 	s += summaryLabel.Render("Start At")
 	s += m.startTime.Format(time.TimeOnly)
+
+	duration := m.endTime.Sub(m.startTime)
+	if m.endTime.IsZero() {
+		duration = time.Now().Sub(m.startTime)
+	}
+
+	s += "\n"
+
+	s += summaryLabel.Render("Duration")
+	s += duration.Truncate(time.Millisecond).String()
 
 	return s
 }

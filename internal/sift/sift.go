@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/timtatt/sift/internal/tests"
@@ -29,14 +30,32 @@ func (s *sift) ScanStdin() error {
 		}
 
 		s.model.testManager.AddTestOutput(line)
-		s.program.Send(TestsUpdatedMsg{})
 	}
 
 	if err := scanner.Err(); err != nil {
 		return fmt.Errorf("failed to scan stdin: %w", err)
 	}
 
+	s.model.endTime = time.Now()
+
 	return nil
+}
+
+type FrameMsg struct{}
+
+// sends a msg to bubbletea model on an interval to ensure the view is being updated according to framerate
+func (s *sift) Frame(ctx context.Context, tps int) {
+	tick := time.NewTicker(time.Second / time.Duration(tps))
+	defer tick.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-tick.C:
+			s.program.Send(FrameMsg{})
+		}
+	}
 }
 
 func Run(ctx context.Context) error {
@@ -44,10 +63,12 @@ func Run(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	fps := 24
+
 	m := NewSiftModel()
 	p := tea.NewProgram(
 		m,
-		tea.WithFPS(24),
+		tea.WithFPS(fps),
 		tea.WithAltScreen(),
 		tea.WithContext(ctx),
 		tea.WithMouseCellMotion(),
@@ -63,6 +84,8 @@ func Run(ctx context.Context) error {
 			cancel()
 		}
 	}()
+
+	go sift.Frame(ctx, fps)
 
 	if _, err := p.Run(); err != nil {
 		return err
