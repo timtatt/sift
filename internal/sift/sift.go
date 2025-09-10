@@ -45,7 +45,7 @@ func Run(ctx context.Context) error {
 	defer cancel()
 
 	m := &siftModel{
-		tests:     make([]TestNode, 0),
+		tests:     make([]*TestNode, 0),
 		testLogs:  make(map[TestReference]string),
 		startTime: time.Now(),
 	}

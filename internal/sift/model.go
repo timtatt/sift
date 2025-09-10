@@ -11,7 +11,7 @@ import (
 )
 
 type siftModel struct {
-	tests    []TestNode
+	tests    []*TestNode
 	testLogs map[TestReference]string
 	testLock sync.Mutex
 
@@ -64,7 +64,7 @@ func (m *siftModel) AddTest(testOutput TestOutputLine) {
 	case "run":
 		m.testLock.Lock()
 
-		m.tests = append(m.tests, TestNode{
+		m.tests = append(m.tests, &TestNode{
 			Ref:     testRef,
 			Status:  "run",
 			Toggled: false,
@@ -74,7 +74,7 @@ func (m *siftModel) AddTest(testOutput TestOutputLine) {
 	case "pass", "fail":
 		m.testLock.Lock()
 
-		testIdx := slices.IndexFunc(m.tests, func(t TestNode) bool {
+		testIdx := slices.IndexFunc(m.tests, func(t *TestNode) bool {
 			return t.Ref == testRef
 		})
 		if testIdx > -1 {
@@ -99,6 +99,11 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Cool, what was the actual key pressed?
 		switch msg.String() {
+		// TODO: change this keymap
+		case "a":
+			for _, test := range m.tests {
+				test.Toggled = true
+			}
 
 		// These keys should exit the program.
 		case "ctrl+c", "q":
