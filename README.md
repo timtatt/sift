@@ -1,7 +1,7 @@
 # sift
 *A lightweight terminal UI for displaying Go tests.*
 
-![Screenshot of the Sift UI](/assets/screenshot.png "v0.1.0 UI")
+<img src="/assets/screenshot.png" width="60%" alt="Screenshot of the Sift UI">
 
 Sift solves the problem of verbose Go test logs by allowing you to show/hide the logs at an individual tests level.
 
