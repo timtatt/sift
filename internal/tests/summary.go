@@ -11,6 +11,12 @@ type Summary struct {
 	total    TestSummary
 }
 
+func NewSummary() *Summary {
+	return &Summary{
+		packages: make(map[string]TestSummary),
+	}
+}
+
 func (s *Summary) AddPackage(pkg string, status string) {
 	ps, ok := s.packages[pkg]
 	if !ok {

@@ -2,6 +2,7 @@ package sift
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/help"
@@ -19,7 +20,7 @@ type siftModel struct {
 	startTime time.Time
 	ready     bool
 	viewport  viewport.Model
-	keys      []tea.KeyMsg
+	keyBuffer []string
 
 	help help.Model
 
@@ -38,7 +39,32 @@ func NewSiftModel() *siftModel {
 type TestsUpdatedMsg struct{}
 
 func (m *siftModel) Init() tea.Cmd {
+	// initialise key ring buffer with size 2
+	m.keyBuffer = make([]string, 2)
 	return nil
+}
+
+func (m *siftModel) LastKeys(n int) string {
+	if n > len(m.keyBuffer) {
+		n = len(m.keyBuffer)
+	}
+
+	var s string
+	for i := len(m.keyBuffer) - n; i < len(m.keyBuffer); i++ {
+		s += m.keyBuffer[i]
+	}
+
+	return s
+}
+
+func (m *siftModel) BufferKey(msg tea.KeyMsg) {
+	// shift ring buffer left
+	for i := range len(m.keyBuffer) - 1 {
+		m.keyBuffer[i] = m.keyBuffer[i+1]
+	}
+
+	// add new key to end of buffer
+	m.keyBuffer[len(m.keyBuffer)-1] = msg.String()
 }
 
 func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -51,22 +77,59 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.windowSize = msg
 		if !m.ready {
+			m.help.Width = msg.Width
 			m.viewport = viewport.New(msg.Width, msg.Height)
 			m.viewport.KeyMap = keys.viewport
 			m.ready = true
 		} else {
+			m.help.Width = msg.Width
 			m.viewport.Width = msg.Width
 		}
 	case tea.KeyMsg:
+		m.BufferKey(msg)
+
+		switch m.LastKeys(2) {
+		case "zA":
+			// toggle recursively
+			parentTest := m.testManager.GetTest(m.cursor)
+
+			newState := !m.toggledTests[parentTest.Ref]
+			m.toggledTests[parentTest.Ref] = newState
+			for _, test := range m.testManager.GetTests {
+				if test.Ref.Package == parentTest.Ref.Package && strings.HasPrefix(test.Ref.Test, parentTest.Ref.Test) {
+					m.toggledTests[test.Ref] = newState
+				}
+			}
+
+		case "zR":
+			// expand all
+			for _, test := range m.testManager.GetTests {
+				m.toggledTests[test.Ref] = true
+			}
+		case "zM":
+			// collapse all
+			for _, test := range m.testManager.GetTests {
+				m.toggledTests[test.Ref] = false
+			}
+		case "za":
+			// toggle over cursor
+			test := m.testManager.GetTest(m.cursor)
+			m.toggledTests[test.Ref] = !m.toggledTests[test.Ref]
+		case "zo":
+			// expand over cursor
+			test := m.testManager.GetTest(m.cursor)
+			m.toggledTests[test.Ref] = true
+		case "zc":
+			// collapse over cursor
+			test := m.testManager.GetTest(m.cursor)
+			m.toggledTests[test.Ref] = false
+		}
+
 		// TODO: use keys here
 		switch msg.String() {
 		// TODO: change this keymap
 		case "?":
 			m.help.ShowAll = !m.help.ShowAll
-		case "a":
-			for _, test := range m.testManager.GetTests {
-				m.toggledTests[test.Ref] = true
-			}
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "up", "k":
@@ -94,6 +157,7 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 var (
+	// TODO: clean up styles
 	iconStyle = lipgloss.NewStyle().Bold(true)
 	greenText = iconStyle.
 			Foreground(lipgloss.Color("28"))
