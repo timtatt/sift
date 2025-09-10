@@ -111,52 +111,6 @@ var (
 	logStyle = lipgloss.NewStyle().PaddingLeft(4)
 )
 
-type TestSummary struct {
-	Passed  int
-	Failed  int
-	Running int
-}
-
-type Summary struct {
-	packages map[string]TestSummary
-	total    TestSummary
-}
-
-func (s *Summary) AddPackage(pkg string, status string) {
-	ps, ok := s.packages[pkg]
-	if !ok {
-		ps = TestSummary{}
-	}
-
-	switch status {
-	case "pass":
-		s.total.Passed++
-		ps.Passed++
-	case "fail":
-		s.total.Failed++
-		ps.Failed++
-	case "run":
-		s.total.Running++
-		ps.Running++
-	}
-
-	s.packages[pkg] = ps
-}
-
-func (s *Summary) Total() TestSummary {
-	return s.total
-}
-
-func (s *Summary) PackageSummary() TestSummary {
-	ps := TestSummary{}
-	for _, p := range s.packages {
-		ps.Passed += p.Passed
-		ps.Failed += p.Failed
-		ps.Running += p.Running
-	}
-	return ps
-}
-
 func (m *siftModel) View() string {
 	s := ""
 
@@ -164,7 +118,6 @@ func (m *siftModel) View() string {
 
 	m.viewport.SetContent(testView)
 
-	// footer
 	var footer string
 	footer += m.summaryView(summary)
 	footer += "\n"
@@ -186,12 +139,10 @@ func (m *siftModel) View() string {
 }
 
 // TODO: don't like how summary is being handled
-func (m *siftModel) testView() (string, Summary) {
+func (m *siftModel) testView() (string, *tests.Summary) {
 	var s string
 
-	summary := Summary{
-		packages: make(map[string]TestSummary),
-	}
+	summary := tests.NewSummary()
 
 	for i, test := range m.testManager.GetTests {
 
@@ -234,7 +185,7 @@ func (m *siftModel) testView() (string, Summary) {
 	return s, summary
 }
 
-func (m *siftModel) summaryView(summary Summary) string {
+func (m *siftModel) summaryView(summary *tests.Summary) string {
 	var s string
 
 	summaryLabel := dimmed.Width(10).Align(lipgloss.Right).PaddingLeft(1).PaddingRight(1)

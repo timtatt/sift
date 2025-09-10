@@ -4,6 +4,8 @@ A lightweight terminal UI for displaying Go tests
 ## Roadmap
 
 - [x] Scrolling support
+- [ ] Add test status to summary
+- [ ] Add header
 - [ ] Vim keymaps for handling folds
 - [ ] Accordion levels based on '/'
 - [ ] Nesting the child tests
@@ -12,3 +14,4 @@ A lightweight terminal UI for displaying Go tests
 - [ ] Add help screen
 - [ ] Support for light mode
 - [ ] Add inline mode to show test summary
+- [ ] Add animated chars
