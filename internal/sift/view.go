@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -19,6 +19,9 @@ type siftModel struct {
 	startTime time.Time
 	ready     bool
 	viewport  viewport.Model
+	keys      []tea.KeyMsg
+
+	help help.Model
 
 	windowSize tea.WindowSizeMsg
 }
@@ -27,6 +30,7 @@ func NewSiftModel() *siftModel {
 	return &siftModel{
 		testManager:  tests.NewTestManager(),
 		toggledTests: make(map[tests.TestReference]bool),
+		help:         help.New(),
 		startTime:    time.Now(),
 	}
 }
@@ -34,7 +38,6 @@ func NewSiftModel() *siftModel {
 type TestsUpdatedMsg struct{}
 
 func (m *siftModel) Init() tea.Cmd {
-	// Just return `nil`, which means "no I/O right now, please."
 	return nil
 }
 
@@ -49,27 +52,17 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.windowSize = msg
 		if !m.ready {
 			m.viewport = viewport.New(msg.Width, msg.Height)
-			m.viewport.KeyMap = viewport.KeyMap{
-				Down: key.NewBinding(
-					key.WithKeys("ctrl+e"),
-				),
-				Up: key.NewBinding(
-					key.WithKeys("ctrl+y"),
-				),
-				HalfPageUp: key.NewBinding(
-					key.WithKeys("ctrl+u"),
-				),
-				HalfPageDown: key.NewBinding(
-					key.WithKeys("ctrl+d"),
-				),
-			}
+			m.viewport.KeyMap = keys.viewport
 			m.ready = true
 		} else {
 			m.viewport.Width = msg.Width
 		}
 	case tea.KeyMsg:
+		// TODO: use keys here
 		switch msg.String() {
 		// TODO: change this keymap
+		case "?":
+			m.help.ShowAll = !m.help.ShowAll
 		case "a":
 			for _, test := range m.testManager.GetTests {
 				m.toggledTests[test.Ref] = true
@@ -171,19 +164,23 @@ func (m *siftModel) View() string {
 
 	m.viewport.SetContent(testView)
 
-	summaryView := m.summaryView(summary)
+	// footer
+	var footer string
+	footer += m.summaryView(summary)
+	footer += "\n"
+	footer += lipgloss.NewStyle().Padding(1).Render(m.help.View(keys))
 
 	testViewHeight := lipgloss.Height(testView)
 	if testViewHeight < m.windowSize.Height {
 		m.viewport.Height = testViewHeight
 	} else {
-		m.viewport.Height = m.windowSize.Height - lipgloss.Height(summaryView)
+		m.viewport.Height = m.windowSize.Height - lipgloss.Height(footer)
 	}
 
 	s += m.viewport.View()
 
 	s += "\n"
-	s += summaryView
+	s += footer
 
 	return s
 }
@@ -279,10 +276,6 @@ func (m *siftModel) summaryView(summary Summary) string {
 
 	s += summaryLabel.Render("Start At")
 	s += m.startTime.Format(time.TimeOnly)
-	s += "\n"
 
-	s += "\n"
-
-	// Send the UI for rendering
 	return s
 }
