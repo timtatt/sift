@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -17,6 +19,10 @@ type siftModel struct {
 
 	cursor    int
 	startTime time.Time
+	ready     bool
+	viewport  viewport.Model
+
+	windowSize tea.WindowSizeMsg
 }
 
 type TestOutputLine struct {
@@ -92,9 +98,34 @@ func (m *siftModel) Init() tea.Cmd {
 }
 
 func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var (
+		cmd  tea.Cmd
+		cmds []tea.Cmd
+	)
 
 	switch msg := msg.(type) {
-
+	case tea.WindowSizeMsg:
+		m.windowSize = msg
+		if !m.ready {
+			m.viewport = viewport.New(msg.Width, msg.Height)
+			m.viewport.KeyMap = viewport.KeyMap{
+				Down: key.NewBinding(
+					key.WithKeys("ctrl+e"),
+				),
+				Up: key.NewBinding(
+					key.WithKeys("ctrl+y"),
+				),
+				HalfPageUp: key.NewBinding(
+					key.WithKeys("ctrl+u"),
+				),
+				HalfPageDown: key.NewBinding(
+					key.WithKeys("ctrl+d"),
+				),
+			}
+			m.ready = true
+		} else {
+			m.viewport.Width = msg.Width
+		}
 	case tea.KeyMsg:
 
 		// Cool, what was the actual key pressed?
@@ -128,9 +159,10 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	// Return the updated model to the Bubble Tea runtime for processing.
-	// Note that we're not returning a command.
-	return m, nil
+	m.viewport, cmd = m.viewport.Update(msg)
+	cmds = append(cmds, cmd)
+
+	return m, tea.Batch(cmds...)
 }
 
 var (
@@ -200,11 +232,35 @@ func (s *Summary) PackageSummary() TestSummary {
 func (m *siftModel) View() string {
 	s := ""
 
+	testView, summary := m.testView()
+
+	m.viewport.SetContent(testView)
+
+	summaryView := m.summaryView(summary)
+
+	testViewHeight := lipgloss.Height(testView)
+	if testViewHeight < m.windowSize.Height {
+		m.viewport.Height = testViewHeight
+	} else {
+		m.viewport.Height = m.windowSize.Height - lipgloss.Height(summaryView)
+	}
+
+	s += m.viewport.View()
+
+	s += "\n"
+	s += summaryView
+
+	return s
+}
+
+// TODO: don't like how summary is being handled
+func (m *siftModel) testView() (string, Summary) {
+	var s string
+
 	summary := Summary{
 		packages: make(map[string]TestSummary),
 	}
 
-	// Iterate over our choices
 	for i, test := range m.tests {
 
 		highlighted := m.cursor == i
@@ -247,9 +303,11 @@ func (m *siftModel) View() string {
 		}
 	}
 
-	// print summary
+	return s, summary
+}
 
-	s += "\n"
+func (m *siftModel) summaryView(summary Summary) string {
+	var s string
 
 	summaryLabel := dimmed.Width(10).Align(lipgloss.Right).PaddingLeft(1).PaddingRight(1)
 
