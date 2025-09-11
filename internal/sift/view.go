@@ -21,6 +21,7 @@ type siftModel struct {
 	endTime   time.Time
 
 	ready     bool
+	started   bool
 	viewport  viewport.Model
 	keyBuffer []string
 
@@ -34,7 +35,6 @@ func NewSiftModel() *siftModel {
 		testManager:  tests.NewTestManager(),
 		toggledTests: make(map[tests.TestReference]bool),
 		help:         help.New(),
-		startTime:    time.Now(),
 	}
 }
 
@@ -72,6 +72,11 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd  tea.Cmd
 		cmds []tea.Cmd
 	)
+
+	if !m.started && m.testManager.GetTestCount() > 0 {
+		m.started = true
+		m.startTime = time.Now()
+	}
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -173,33 +178,48 @@ var (
 	highlightedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("229")).Background(lipgloss.Color("25"))
 
 	logStyle = lipgloss.NewStyle().PaddingLeft(4)
+
+	headerStyle = lipgloss.NewStyle().Background(lipgloss.Color("27")).Bold(true).PaddingLeft(1).PaddingRight(1).MarginBottom(1)
+
+	bodyStyle = lipgloss.NewStyle().Padding(1)
 )
 
 func (m *siftModel) View() string {
 	s := ""
 
-	testView, summary := m.testView()
+	s += headerStyle.Render("\u2207 sift")
+	s += "\n"
 
-	m.viewport.SetContent(testView)
+	s += dimmed.Render()
 
-	var footer string
-	footer += m.summaryView(summary)
-	footer += "\n"
-	footer += lipgloss.NewStyle().Padding(1).Render(m.help.View(keys))
-
-	testViewHeight := lipgloss.Height(testView)
-	if testViewHeight < m.windowSize.Height {
-		m.viewport.Height = testViewHeight
-	} else {
-		m.viewport.Height = m.windowSize.Height - lipgloss.Height(footer)
+	if !m.started {
+		s += "Waiting for test results..."
 	}
 
-	s += m.viewport.View()
+	if m.started {
+		testView, summary := m.testView()
 
-	s += "\n"
-	s += footer
+		m.viewport.SetContent(testView)
 
-	return s
+		var footer string
+		footer += m.summaryView(summary)
+		footer += "\n"
+		footer += lipgloss.NewStyle().Padding(1).Render(m.help.View(keys))
+
+		testViewHeight := lipgloss.Height(testView)
+		if testViewHeight < m.windowSize.Height {
+			m.viewport.Height = testViewHeight
+		} else {
+			m.viewport.Height = m.windowSize.Height - lipgloss.Height(footer)
+		}
+
+		s += m.viewport.View()
+
+		s += "\n"
+		s += footer
+	}
+
+	return bodyStyle.Render(s)
 }
 
 // TODO: don't like how summary is being handled
@@ -237,7 +257,7 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 		}
 
 		// Render the row
-		s += fmt.Sprintf(" %s %s %s", statusIcon, testName, elapsed)
+		s += fmt.Sprintf("%s %s %s", statusIcon, testName, elapsed)
 
 		s += "\n"
 
@@ -261,7 +281,7 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 func (m *siftModel) summaryView(summary *tests.Summary) string {
 	var s string
 
-	summaryLabel := dimmed.Width(10).Align(lipgloss.Right).PaddingLeft(1).PaddingRight(1)
+	summaryLabel := dimmed.Width(10).Align(lipgloss.Right).PaddingRight(1)
 
 	ps := summary.PackageSummary()
 
