@@ -118,6 +118,17 @@ func (tm *TestManager) GetTestCount() int {
 	return len(tm.tests)
 }
 
+func (tm *TestManager) GetLogCount(testRef TestReference) int {
+	tm.testLogLock.RLock()
+	defer tm.testLogLock.RUnlock()
+
+	if log, ok := tm.testLogs[testRef]; ok {
+		return len(log)
+	}
+
+	return 0
+}
+
 func (tm *TestManager) GetLogs(testRef TestReference) []string {
 	tm.testLogLock.RLock()
 	defer tm.testLogLock.RUnlock()

@@ -17,9 +17,7 @@ type siftModel struct {
 	testManager  *tests.TestManager
 	toggledTests map[tests.TestReference]bool
 
-	cursor        int
-	selectedTest  int
-	testPositions []int
+	cursor *cursor
 
 	startTime time.Time
 	endTime   time.Time
@@ -34,12 +32,75 @@ type siftModel struct {
 	windowSize tea.WindowSizeMsg
 }
 
+type cursor struct {
+	test int // tracks the test currently selected
+	log  int // tracks the cursor log line
+}
+
 func NewSiftModel() *siftModel {
 	return &siftModel{
 		testManager:  tests.NewTestManager(),
 		toggledTests: make(map[tests.TestReference]bool),
 		help:         help.New(),
+		cursor: &cursor{
+			test: 0,
+			log:  -1,
+		},
 	}
+}
+
+func (m *siftModel) PrevTest() {
+	if m.cursor.test > 0 {
+		m.cursor.test--
+		m.cursor.log = -1
+	}
+}
+
+func (m *siftModel) NextTest() {
+	if m.cursor.test < m.testManager.GetTestCount()-1 {
+		m.cursor.test++
+		m.cursor.log = -1
+	}
+}
+
+func (m *siftModel) CursorDown() {
+	test := m.testManager.GetTest(m.cursor.test)
+
+	logCount := 0
+	if m.toggledTests[test.Ref] {
+		logCount = m.testManager.GetLogCount(test.Ref)
+	}
+
+	// check if there are more logs we can highlight.
+	// check if this is not the last test
+	if m.cursor.log == logCount-1 && m.cursor.test < m.testManager.GetTestCount()-1 {
+		// go to the next test
+		m.cursor.test++
+		m.cursor.log = -1
+	} else {
+		m.cursor.log++
+	}
+}
+
+func (m *siftModel) CursorUp() {
+
+	if m.cursor.log == -1 && m.cursor.test > 0 {
+		// go to the next test
+		m.cursor.test--
+
+		test := m.testManager.GetTest(m.cursor.test)
+
+		logCount := 0
+		if m.toggledTests[test.Ref] {
+			logCount = m.testManager.GetLogCount(test.Ref)
+		}
+
+		// set the log to the last log in previous test
+		m.cursor.log = logCount - 1
+	} else {
+		m.cursor.log--
+	}
+
 }
 
 func (m *siftModel) Init() tea.Cmd {
@@ -105,7 +166,7 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch m.LastKeys(2) {
 		case "zA":
 			// toggle recursively
-			parentTest := m.testManager.GetTest(m.selectedTest)
+			parentTest := m.testManager.GetTest(m.cursor.test)
 
 			newState := !m.toggledTests[parentTest.Ref]
 			m.toggledTests[parentTest.Ref] = newState
@@ -117,7 +178,7 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// if collapsing the tests, set the cursor to the top element
 			if !newState {
-				m.cursor = m.testPositions[m.selectedTest]
+				m.cursor.log = -1
 			}
 
 		case "zR":
@@ -130,47 +191,40 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			for _, test := range m.testManager.GetTests {
 				m.toggledTests[test.Ref] = false
 			}
-			m.cursor = m.selectedTest
+			m.cursor.log = -1
 		case "za":
 			// toggle over cursor
-			test := m.testManager.GetTest(m.selectedTest)
+			test := m.testManager.GetTest(m.cursor.test)
 			m.toggledTests[test.Ref] = !m.toggledTests[test.Ref]
 		case "zo":
 			// expand over cursor
-			test := m.testManager.GetTest(m.selectedTest)
+			test := m.testManager.GetTest(m.cursor.test)
 			m.toggledTests[test.Ref] = true
 		case "zc":
 			// collapse over cursor
-			test := m.testManager.GetTest(m.selectedTest)
+			test := m.testManager.GetTest(m.cursor.test)
 			m.toggledTests[test.Ref] = false
-			m.cursor = m.testPositions[m.selectedTest]
+
+			m.cursor.log = -1
 		}
 
 		// TODO: use keys here
 		switch msg.String() {
 		case "{":
-			m.selectedTest = max(0, m.selectedTest-1)
-			m.cursor = m.testPositions[m.selectedTest]
+			m.NextTest()
 		case "}":
-			m.selectedTest = min(m.testManager.GetTestCount()-1, m.selectedTest+1)
-			m.cursor = m.testPositions[m.selectedTest]
+			m.PrevTest()
 		// TODO: change this keymap
 		case "?":
 			m.help.ShowAll = !m.help.ShowAll
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-			m.detectSelectedTest()
+			m.CursorUp()
 		case "down", "j":
-			if m.cursor < m.viewport.TotalLineCount() {
-				m.cursor++
-			}
-			m.detectSelectedTest()
+			m.CursorDown()
 		case "enter", " ":
-			test := m.testManager.GetTest(m.selectedTest)
+			test := m.testManager.GetTest(m.cursor.test)
 
 			if test != nil {
 				m.toggledTests[test.Ref] = !m.toggledTests[test.Ref]
@@ -183,32 +237,6 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	return m, tea.Batch(cmds...)
-}
-
-// detect which test the cursor is highlighting
-func (m *siftModel) detectSelectedTest() {
-	// can this be done at rendering
-
-	selectedTestCursor := m.testPositions[m.selectedTest]
-
-	if m.cursor < selectedTestCursor {
-		// the cursor is now over the previous test
-		m.selectedTest--
-		return
-	}
-
-	if m.selectedTest == len(m.testPositions)-1 {
-		// last test is selected, ignore
-		return
-	}
-
-	nextTestCursor := m.testPositions[m.selectedTest+1]
-
-	if m.cursor >= nextTestCursor {
-		// the cursor is now over the next test
-		m.selectedTest++
-		return
-	}
 }
 
 func (m *siftModel) View() string {
@@ -273,14 +301,9 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 
 	summary := tests.NewSummary()
 
-	m.testPositions = make([]int, 0, len(m.testPositions))
-
 	for i, test := range m.testManager.GetTests {
 
-		highlighted := m.selectedTest == i
-
-		testPos := vb.Lines()
-		m.testPositions = append(m.testPositions, testPos)
+		highlighted := m.cursor.test == i
 
 		var statusIcon string
 		summary.AddPackage(test.Ref.Package, test.Status)
@@ -295,7 +318,7 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 			statusIcon = styleTick.Render("\u2713")
 		}
 
-		testName := fmt.Sprintf("%d %s", testPos, test.Ref.Test)
+		testName := test.Ref.Test
 
 		if highlighted {
 			testName = styleHighlighted.Render(testName)
@@ -316,9 +339,9 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 		if m.toggledTests[test.Ref] {
 			logs := m.testManager.GetLogs(test.Ref)
 
-			for _, log := range logs {
+			for logIdx, log := range logs {
 
-				if vb.Lines() == m.cursor {
+				if highlighted && logIdx == m.cursor.log {
 					log = styleHighlightedLog.Render(log)
 				} else if !highlighted {
 					log = styleSecondary.Render(log)
