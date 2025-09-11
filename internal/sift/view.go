@@ -168,7 +168,7 @@ var (
 			Foreground(lipgloss.Color("28"))
 
 	redText = iconStyle.
-		Foreground(lipgloss.Color("161"))
+		Foreground(lipgloss.Color("124"))
 
 	orangeText = iconStyle.
 			Foreground(lipgloss.Color("214"))
@@ -182,6 +182,10 @@ var (
 	headerStyle = lipgloss.NewStyle().Background(lipgloss.Color("27")).Bold(true).PaddingLeft(1).PaddingRight(1)
 
 	bodyStyle = lipgloss.NewStyle().Padding(1)
+
+	statusStyle     = lipgloss.NewStyle().PaddingLeft(1).PaddingRight(1)
+	passStatusStyle = statusStyle.Background(lipgloss.Color("28"))
+	failStatusStyle = statusStyle.Background(lipgloss.Color("124"))
 )
 
 func (m *siftModel) View() string {
@@ -204,9 +208,16 @@ func (m *siftModel) View() string {
 		m.viewport.SetContent(testView)
 
 		var footer string
-		footer += m.summaryView(summary)
 		footer += "\n"
-		footer += lipgloss.NewStyle().Padding(1).Render(m.help.View(keys))
+		footer += m.summaryView(summary)
+
+		if statusView := m.statusView(summary); statusView != "" {
+			footer += "\n\n"
+			footer += statusView
+		}
+
+		footer += "\n"
+		footer += lipgloss.NewStyle().PaddingTop(1).PaddingBottom(1).Render(m.help.View(keys))
 
 		testViewHeight := lipgloss.Height(testView)
 		maxTestViewHeight := m.windowSize.Height - lipgloss.Height(footer) - lipgloss.Height(header) - 2
@@ -214,11 +225,23 @@ func (m *siftModel) View() string {
 
 		s += m.viewport.View()
 
-		s += "\n"
 		s += footer
 	}
 
 	return bodyStyle.Render(s)
+}
+
+func (m *siftModel) statusView(summary *tests.Summary) string {
+
+	total := summary.Total()
+
+	if m.endTime.IsZero() {
+		return ""
+	} else if total.Failed > 0 {
+		return failStatusStyle.Render("FAILED")
+	}
+
+	return passStatusStyle.Render("PASSED")
 }
 
 // TODO: don't like how summary is being handled
@@ -280,7 +303,7 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 func (m *siftModel) summaryView(summary *tests.Summary) string {
 	var s string
 
-	summaryLabel := dimmed.Width(10).Align(lipgloss.Right).PaddingRight(1)
+	summaryLabel := dimmed.Width(9).Align(lipgloss.Right).PaddingRight(1)
 
 	ps := summary.PackageSummary()
 
