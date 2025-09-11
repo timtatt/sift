@@ -29,3 +29,8 @@ func TestWithADelay(t *testing.T) {
 	// Simulate a delay
 	time.Sleep(2 * time.Second)
 }
+
+func TestSkippedTest(t *testing.T) {
+	t.Skip("this test is not required")
+
+}

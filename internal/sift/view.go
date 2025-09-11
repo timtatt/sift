@@ -173,6 +173,9 @@ var (
 	orangeText = iconStyle.
 			Foreground(lipgloss.Color("214"))
 
+	blueText = iconStyle.
+			Foreground(lipgloss.Color("27"))
+
 	dimmed = lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
 
 	highlightedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("229")).Background(lipgloss.Color("25"))
@@ -257,6 +260,8 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 		var statusIcon string
 		summary.AddPackage(test.Ref.Package, test.Status)
 		switch test.Status {
+		case "skip":
+			statusIcon = blueText.Render("\u23ED")
 		case "run":
 			statusIcon = orangeText.Render("\u2022")
 		case "fail":

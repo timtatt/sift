@@ -62,7 +62,7 @@ func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
 			Ref:    testRef,
 			Status: "run",
 		})
-	case "pass", "fail":
+	case "pass", "fail", "skip":
 		tm.testLock.Lock()
 		defer tm.testLock.Unlock()
 
