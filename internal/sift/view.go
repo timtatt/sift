@@ -66,14 +66,17 @@ func (m *siftModel) NextTest() {
 func (m *siftModel) CursorDown() {
 	test := m.testManager.GetTest(m.cursor.test)
 
+	toggled := m.toggledTests[test.Ref]
+
 	logCount := 0
-	if m.toggledTests[test.Ref] {
+	if toggled {
 		logCount = m.testManager.GetLogCount(test.Ref)
 	}
 
 	// check if there are more logs we can highlight.
 	// check if this is not the last test
-	if m.cursor.log == logCount-1 && m.cursor.test < m.testManager.GetTestCount()-1 {
+
+	if (!toggled || m.cursor.log == logCount-1) && m.cursor.test < m.testManager.GetTestCount()-1 {
 		// go to the next test
 		m.cursor.test++
 		m.cursor.log = 0
@@ -83,20 +86,20 @@ func (m *siftModel) CursorDown() {
 }
 
 func (m *siftModel) CursorUp() {
-
 	if m.cursor.log == 0 && m.cursor.test > 0 {
 		// go to the next test
 		m.cursor.test--
 
 		test := m.testManager.GetTest(m.cursor.test)
 
-		logCount := 0
 		if m.toggledTests[test.Ref] {
-			logCount = m.testManager.GetLogCount(test.Ref)
+			logCount := m.testManager.GetLogCount(test.Ref)
+			m.cursor.log = logCount - 1
+		} else {
+			m.cursor.log = 0
 		}
 
 		// set the log to the last log in previous test
-		m.cursor.log = logCount - 1
 	} else {
 		m.cursor.log--
 	}
@@ -244,6 +247,7 @@ func (m *siftModel) View() string {
 
 	var header string
 	header += styleHeader.Render("\u2207 sift")
+	header += fmt.Sprintf("[%d, %d]", m.cursor.test, m.cursor.log)
 	header += "\n\n"
 
 	s += header
