@@ -44,7 +44,7 @@ func NewSiftModel() *siftModel {
 		help:         help.New(),
 		cursor: &cursor{
 			test: 0,
-			log:  -1,
+			log:  0,
 		},
 	}
 }
@@ -52,14 +52,14 @@ func NewSiftModel() *siftModel {
 func (m *siftModel) PrevTest() {
 	if m.cursor.test > 0 {
 		m.cursor.test--
-		m.cursor.log = -1
+		m.cursor.log = 0
 	}
 }
 
 func (m *siftModel) NextTest() {
 	if m.cursor.test < m.testManager.GetTestCount()-1 {
 		m.cursor.test++
-		m.cursor.log = -1
+		m.cursor.log = 0
 	}
 }
 
@@ -76,7 +76,7 @@ func (m *siftModel) CursorDown() {
 	if m.cursor.log == logCount-1 && m.cursor.test < m.testManager.GetTestCount()-1 {
 		// go to the next test
 		m.cursor.test++
-		m.cursor.log = -1
+		m.cursor.log = 0
 	} else {
 		m.cursor.log++
 	}
@@ -84,7 +84,7 @@ func (m *siftModel) CursorDown() {
 
 func (m *siftModel) CursorUp() {
 
-	if m.cursor.log == -1 && m.cursor.test > 0 {
+	if m.cursor.log == 0 && m.cursor.test > 0 {
 		// go to the next test
 		m.cursor.test--
 
@@ -211,9 +211,9 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// TODO: use keys here
 		switch msg.String() {
 		case "{":
-			m.NextTest()
-		case "}":
 			m.PrevTest()
+		case "}":
+			m.NextTest()
 		// TODO: change this keymap
 		case "?":
 			m.help.ShowAll = !m.help.ShowAll
@@ -244,7 +244,6 @@ func (m *siftModel) View() string {
 
 	var header string
 	header += styleHeader.Render("\u2207 sift")
-	header += fmt.Sprintf(" %d", m.cursor)
 	header += "\n\n"
 
 	s += header
