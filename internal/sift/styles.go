@@ -28,7 +28,8 @@ var (
 	styleSecondary   = lipgloss.NewStyle().Foreground(colorGrey)
 	styleHighlighted = lipgloss.NewStyle().Background(colorMutedBlue)
 
-	styleLog = lipgloss.NewStyle().PaddingLeft(2)
+	styleLog            = lipgloss.NewStyle().PaddingLeft(2)
+	styleHighlightedLog = lipgloss.NewStyle().Bold(true).Foreground(colorMutedBlue)
 
 	styleHeader = lipgloss.NewStyle().Background(colorBlue).Bold(true).PaddingLeft(1).PaddingRight(1)
 

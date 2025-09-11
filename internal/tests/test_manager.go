@@ -2,6 +2,7 @@ package tests
 
 import (
 	"slices"
+	"strings"
 	"sync"
 	"time"
 )
@@ -10,8 +11,15 @@ type TestManager struct {
 	tests    []*TestNode
 	testLock sync.RWMutex
 
-	testLogs    map[TestReference]string
+	testLogs    map[TestReference][]string
 	testLogLock sync.RWMutex
+}
+
+func NewTestManager() *TestManager {
+	return &TestManager{
+		tests:    make([]*TestNode, 0),
+		testLogs: make(map[TestReference][]string),
+	}
 }
 
 type TestReference struct {
@@ -48,10 +56,12 @@ func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
 
 		_, ok := tm.testLogs[testRef]
 
-		if !ok {
-			tm.testLogs[testRef] = testOutput.Output
+		log := strings.TrimRight(testOutput.Output, "\n")
+
+		if ok {
+			tm.testLogs[testRef] = append(tm.testLogs[testRef], log)
 		} else {
-			tm.testLogs[testRef] += testOutput.Output
+			tm.testLogs[testRef] = []string{log}
 		}
 
 	case "run":
@@ -108,19 +118,13 @@ func (tm *TestManager) GetTestCount() int {
 	return len(tm.tests)
 }
 
-func (tm *TestManager) GetLogs(testRef TestReference) (string, bool) {
+func (tm *TestManager) GetLogs(testRef TestReference) []string {
 	tm.testLogLock.RLock()
 	defer tm.testLogLock.RUnlock()
 
-	log, ok := tm.testLogs[testRef]
-
-	return log, ok
-}
-
-func NewTestManager() *TestManager {
-	return &TestManager{
-		tests:    make([]*TestNode, 0),
-		testLogs: make(map[TestReference]string),
+	if log, ok := tm.testLogs[testRef]; ok {
+		return log
 	}
 
+	return nil
 }

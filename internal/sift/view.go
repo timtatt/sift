@@ -10,13 +10,17 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/timtatt/sift/internal/tests"
+	"github.com/timtatt/sift/pkg/viewbuilder"
 )
 
 type siftModel struct {
 	testManager  *tests.TestManager
 	toggledTests map[tests.TestReference]bool
 
-	cursor    int
+	cursor        int
+	selectedTest  int
+	testPositions []int
+
 	startTime time.Time
 	endTime   time.Time
 
@@ -132,6 +136,12 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// TODO: use keys here
 		switch msg.String() {
+		case "{":
+			m.selectedTest = max(0, m.selectedTest-1)
+			m.cursor = m.testPositions[m.selectedTest]
+		case "}":
+			m.selectedTest = min(m.testManager.GetTestCount()-1, m.selectedTest+1)
+			m.cursor = m.testPositions[m.selectedTest]
 		// TODO: change this keymap
 		case "?":
 			m.help.ShowAll = !m.help.ShowAll
@@ -141,10 +151,12 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.cursor > 0 {
 				m.cursor--
 			}
+			m.detectSelectedTest()
 		case "down", "j":
-			if m.cursor < m.testManager.GetTestCount()-1 {
+			if m.cursor < m.viewport.TotalLineCount() {
 				m.cursor++
 			}
+			m.detectSelectedTest()
 		case "enter", " ":
 			test := m.testManager.GetTest(m.cursor)
 
@@ -161,11 +173,38 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+// detect which test the cursor is highlighting
+func (m *siftModel) detectSelectedTest() {
+	// can this be done at rendering
+
+	selectedTestCursor := m.testPositions[m.selectedTest]
+
+	if m.cursor < selectedTestCursor {
+		// the cursor is now over the previous test
+		m.selectedTest--
+		return
+	}
+
+	if m.selectedTest == len(m.testPositions)-1 {
+		// last test is selected, ignore
+		return
+	}
+
+	nextTestCursor := m.testPositions[m.selectedTest+1]
+
+	if m.cursor >= nextTestCursor {
+		// the cursor is now over the next test
+		m.selectedTest++
+		return
+	}
+}
+
 func (m *siftModel) View() string {
 	s := ""
 
 	var header string
 	header += styleHeader.Render("\u2207 sift")
+	header += fmt.Sprintf(" %d", m.cursor)
 	header += "\n\n"
 
 	s += header
@@ -189,10 +228,10 @@ func (m *siftModel) View() string {
 		}
 
 		footer += "\n"
-		footer += lipgloss.NewStyle().PaddingTop(1).PaddingBottom(1).Render(m.help.View(keys))
+		footer += lipgloss.NewStyle().PaddingTop(1).Render(m.help.View(keys))
 
 		testViewHeight := lipgloss.Height(testView)
-		maxTestViewHeight := m.windowSize.Height - lipgloss.Height(footer) - lipgloss.Height(header) - 2
+		maxTestViewHeight := m.windowSize.Height - lipgloss.Height(footer) - lipgloss.Height(header)
 		m.viewport.Height = min(testViewHeight, maxTestViewHeight)
 
 		s += m.viewport.View()
@@ -218,13 +257,18 @@ func (m *siftModel) statusView(summary *tests.Summary) string {
 
 // TODO: don't like how summary is being handled
 func (m *siftModel) testView() (string, *tests.Summary) {
-	var s string
+	vb := viewbuilder.New()
 
 	summary := tests.NewSummary()
 
+	m.testPositions = make([]int, 0, len(m.testPositions))
+
 	for i, test := range m.testManager.GetTests {
 
-		highlighted := m.cursor == i
+		highlighted := m.selectedTest == i
+
+		testPos := vb.Lines()
+		m.testPositions = append(m.testPositions, testPos)
 
 		var statusIcon string
 		summary.AddPackage(test.Ref.Package, test.Status)
@@ -239,10 +283,10 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 			statusIcon = styleTick.Render("\u2713")
 		}
 
-		testName := test.Ref.Test
+		testName := fmt.Sprintf("%d %s", testPos, test.Ref.Test)
 
 		if highlighted {
-			testName = styleHighlighted.Render(test.Ref.Test)
+			testName = styleHighlighted.Render(testName)
 		}
 
 		elapsed := ""
@@ -253,25 +297,31 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 		}
 
 		// Render the row
-		s += fmt.Sprintf("%s %s %s", statusIcon, testName, elapsed)
-
-		s += "\n"
+		vb.Add(fmt.Sprintf("%s %s %s", statusIcon, testName, elapsed))
+		vb.AddLine()
 
 		// print the logs
 		if m.toggledTests[test.Ref] {
-			log, ok := m.testManager.GetLogs(test.Ref)
+			logs := m.testManager.GetLogs(test.Ref)
 
-			if !highlighted {
-				log = styleSecondary.Render(log)
-			}
+			for _, log := range logs {
 
-			if ok {
-				s += styleLog.Render(log) + "\n"
+				log = styleLog.Render(log)
+
+				if vb.Lines() == m.cursor {
+					log = styleHighlightedLog.Render(log)
+				} else if !highlighted {
+					log = styleSecondary.Render(log)
+				}
+
+				vb.Add(log)
+				vb.AddLine()
 			}
+			vb.AddLine()
 		}
 	}
 
-	return s, summary
+	return vb.String(), summary
 }
 
 func (m *siftModel) summaryView(summary *tests.Summary) string {

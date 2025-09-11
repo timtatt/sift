@@ -71,7 +71,6 @@ func Run(ctx context.Context) error {
 		tea.WithFPS(fps),
 		tea.WithAltScreen(),
 		tea.WithContext(ctx),
-		tea.WithMouseCellMotion(),
 	)
 
 	sift := &sift{
