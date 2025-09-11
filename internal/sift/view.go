@@ -95,12 +95,17 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewport.Width = msg.Width
 		}
 	case tea.KeyMsg:
+		// capture the most recent keypress into the ring buffer
 		m.BufferKey(msg)
+
+		// TODO: rewrite how the cursor is managed
+		// 1. do we want the cursor to count for the empty lines inbetween tests
+		// 2. can we get the state to me managed more centrally
 
 		switch m.LastKeys(2) {
 		case "zA":
 			// toggle recursively
-			parentTest := m.testManager.GetTest(m.cursor)
+			parentTest := m.testManager.GetTest(m.selectedTest)
 
 			newState := !m.toggledTests[parentTest.Ref]
 			m.toggledTests[parentTest.Ref] = newState
@@ -108,6 +113,11 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if test.Ref.Package == parentTest.Ref.Package && strings.HasPrefix(test.Ref.Test, parentTest.Ref.Test) {
 					m.toggledTests[test.Ref] = newState
 				}
+			}
+
+			// if collapsing the tests, set the cursor to the top element
+			if !newState {
+				m.cursor = m.testPositions[m.selectedTest]
 			}
 
 		case "zR":
@@ -120,18 +130,20 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			for _, test := range m.testManager.GetTests {
 				m.toggledTests[test.Ref] = false
 			}
+			m.cursor = m.selectedTest
 		case "za":
 			// toggle over cursor
-			test := m.testManager.GetTest(m.cursor)
+			test := m.testManager.GetTest(m.selectedTest)
 			m.toggledTests[test.Ref] = !m.toggledTests[test.Ref]
 		case "zo":
 			// expand over cursor
-			test := m.testManager.GetTest(m.cursor)
+			test := m.testManager.GetTest(m.selectedTest)
 			m.toggledTests[test.Ref] = true
 		case "zc":
 			// collapse over cursor
-			test := m.testManager.GetTest(m.cursor)
+			test := m.testManager.GetTest(m.selectedTest)
 			m.toggledTests[test.Ref] = false
+			m.cursor = m.testPositions[m.selectedTest]
 		}
 
 		// TODO: use keys here
@@ -158,7 +170,7 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.detectSelectedTest()
 		case "enter", " ":
-			test := m.testManager.GetTest(m.cursor)
+			test := m.testManager.GetTest(m.selectedTest)
 
 			if test != nil {
 				m.toggledTests[test.Ref] = !m.toggledTests[test.Ref]
@@ -306,13 +318,13 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 
 			for _, log := range logs {
 
-				log = styleLog.Render(log)
-
 				if vb.Lines() == m.cursor {
 					log = styleHighlightedLog.Render(log)
 				} else if !highlighted {
 					log = styleSecondary.Render(log)
 				}
+
+				log = styleLog.Render(log)
 
 				vb.Add(log)
 				vb.AddLine()

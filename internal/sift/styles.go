@@ -1,6 +1,8 @@
 package sift
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"github.com/charmbracelet/lipgloss"
+)
 
 var (
 	colorGreen     = lipgloss.Color("28")
@@ -28,8 +30,8 @@ var (
 	styleSecondary   = lipgloss.NewStyle().Foreground(colorGrey)
 	styleHighlighted = lipgloss.NewStyle().Background(colorMutedBlue)
 
-	styleLog            = lipgloss.NewStyle().PaddingLeft(2)
-	styleHighlightedLog = lipgloss.NewStyle().Bold(true).Foreground(colorMutedBlue)
+	styleLog            = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("249"))
+	styleHighlightedLog = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7997C9"))
 
 	styleHeader = lipgloss.NewStyle().Background(colorBlue).Bold(true).PaddingLeft(1).PaddingRight(1)
 
