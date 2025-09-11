@@ -161,42 +161,11 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-var (
-	// TODO: clean up styles
-	iconStyle = lipgloss.NewStyle().Bold(true)
-	greenText = iconStyle.
-			Foreground(lipgloss.Color("28"))
-
-	redText = iconStyle.
-		Foreground(lipgloss.Color("124"))
-
-	orangeText = iconStyle.
-			Foreground(lipgloss.Color("214"))
-
-	blueText = iconStyle.
-			Foreground(lipgloss.Color("27"))
-
-	dimmed = lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
-
-	highlightedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("229")).Background(lipgloss.Color("25"))
-
-	logStyle = lipgloss.NewStyle().PaddingLeft(4)
-
-	headerStyle = lipgloss.NewStyle().Background(lipgloss.Color("27")).Bold(true).PaddingLeft(1).PaddingRight(1)
-
-	bodyStyle = lipgloss.NewStyle().Padding(1)
-
-	statusStyle     = lipgloss.NewStyle().PaddingLeft(1).PaddingRight(1)
-	passStatusStyle = statusStyle.Background(lipgloss.Color("28"))
-	failStatusStyle = statusStyle.Background(lipgloss.Color("124"))
-)
-
 func (m *siftModel) View() string {
 	s := ""
 
 	var header string
-	header += headerStyle.Render("\u2207 sift")
-	header += dimmed.MarginLeft(1).Render("v0.1.0")
+	header += styleHeader.Render("\u2207 sift")
 	header += "\n\n"
 
 	s += header
@@ -231,7 +200,7 @@ func (m *siftModel) View() string {
 		s += footer
 	}
 
-	return bodyStyle.Render(s)
+	return styleBody.Render(s)
 }
 
 func (m *siftModel) statusView(summary *tests.Summary) string {
@@ -241,10 +210,10 @@ func (m *siftModel) statusView(summary *tests.Summary) string {
 	if m.endTime.IsZero() {
 		return ""
 	} else if total.Failed > 0 {
-		return failStatusStyle.Render("FAILED")
+		return styleOutcomeFail.Render("FAILED")
 	}
 
-	return passStatusStyle.Render("PASSED")
+	return styleOutcomePass.Render("PASSED")
 }
 
 // TODO: don't like how summary is being handled
@@ -261,24 +230,24 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 		summary.AddPackage(test.Ref.Package, test.Status)
 		switch test.Status {
 		case "skip":
-			statusIcon = blueText.Render("\u23ED")
+			statusIcon = styleSkip.Render("\u23ED")
 		case "run":
-			statusIcon = orangeText.Render("\u2022")
+			statusIcon = styleProgress.Render("\u2022")
 		case "fail":
-			statusIcon = redText.Render("\u00D7")
+			statusIcon = styleCross.Render("\u00D7")
 		case "pass":
-			statusIcon = greenText.Render("\u2713")
+			statusIcon = styleTick.Render("\u2713")
 		}
 
 		testName := test.Ref.Test
 
 		if highlighted {
-			testName = highlightedStyle.Render(test.Ref.Test)
+			testName = styleHighlighted.Render(test.Ref.Test)
 		}
 
 		elapsed := ""
 		if test.Status != "run" {
-			elapsed = dimmed.Render(
+			elapsed = styleSecondary.Render(
 				fmt.Sprintf("(%.2fs)", test.Elapsed.Seconds()),
 			)
 		}
@@ -293,11 +262,11 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 			log, ok := m.testManager.GetLogs(test.Ref)
 
 			if !highlighted {
-				log = dimmed.Render(log)
+				log = styleSecondary.Render(log)
 			}
 
 			if ok {
-				s += logStyle.Render(log) + "\n"
+				s += styleLog.Render(log) + "\n"
 			}
 		}
 	}
@@ -308,41 +277,41 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 func (m *siftModel) summaryView(summary *tests.Summary) string {
 	var s string
 
-	summaryLabel := dimmed.Width(9).Align(lipgloss.Right).PaddingRight(1)
+	summaryLabel := styleSecondary.Width(9).Align(lipgloss.Right).PaddingRight(1)
 
 	ps := summary.PackageSummary()
 
 	s += summaryLabel.Render("Packages")
 	if ps.Passed > 0 {
-		s += greenText.Bold(true).Render(fmt.Sprintf("%d passed ", ps.Passed))
+		s += styleTick.Bold(true).Render(fmt.Sprintf("%d passed ", ps.Passed))
 	}
 
 	if ps.Failed > 0 {
-		s += redText.Bold(true).Render(fmt.Sprintf("%d failed ", ps.Failed))
+		s += styleCross.Bold(true).Render(fmt.Sprintf("%d failed ", ps.Failed))
 	}
 
 	if ps.Running > 0 {
-		s += dimmed.Render(fmt.Sprintf("%d running ", ps.Running))
+		s += styleSecondary.Render(fmt.Sprintf("%d running ", ps.Running))
 	}
-	s += dimmed.Render(fmt.Sprintf("(%d)", ps.Passed+ps.Failed+ps.Running))
+	s += styleSecondary.Render(fmt.Sprintf("(%d)", ps.Passed+ps.Failed+ps.Running))
 	s += "\n"
 
 	s += summaryLabel.Render("Tests")
 	total := summary.Total()
 
 	if total.Passed > 0 {
-		s += greenText.Bold(true).Render(fmt.Sprintf("%d passed ", total.Passed))
+		s += styleTick.Bold(true).Render(fmt.Sprintf("%d passed ", total.Passed))
 	}
 
 	if total.Failed > 0 {
-		s += redText.Bold(true).Render(fmt.Sprintf("%d failed ", total.Failed))
+		s += styleCross.Bold(true).Render(fmt.Sprintf("%d failed ", total.Failed))
 	}
 
 	if total.Running > 0 {
-		s += dimmed.Render(fmt.Sprintf("%d running ", total.Running))
+		s += styleSecondary.Render(fmt.Sprintf("%d running ", total.Running))
 	}
 
-	s += dimmed.Render(fmt.Sprintf("(%d)", total.Passed+total.Failed+total.Running))
+	s += styleSecondary.Render(fmt.Sprintf("(%d)", total.Passed+total.Failed+total.Running))
 	s += "\n"
 
 	s += summaryLabel.Render("Start At")

@@ -29,8 +29,6 @@ To see the available keymaps, press `?`. The keymaps are based on vim motion sta
 
 ## Feature Roadmap
 
-- [ ] Add test status to summary
-- [ ] Add header
 - [ ] Accordion levels based on '/'
 - [ ] Nesting the child tests
 - [ ] Search for tests with '/'
