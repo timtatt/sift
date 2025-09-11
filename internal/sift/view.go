@@ -76,6 +76,7 @@ func (m *siftModel) CursorDown() {
 	// check if there are more logs we can highlight.
 	if toggled && m.cursor.log < logCount-1 {
 		m.cursor.log++
+		return
 	}
 
 	if m.cursor.test == m.testManager.GetTestCount()-1 {
@@ -91,6 +92,7 @@ func (m *siftModel) CursorDown() {
 func (m *siftModel) CursorUp() {
 	if m.cursor.log > 0 {
 		m.cursor.log--
+		return
 	}
 
 	if m.cursor.test == 0 {
