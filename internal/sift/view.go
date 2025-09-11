@@ -179,7 +179,7 @@ var (
 
 	logStyle = lipgloss.NewStyle().PaddingLeft(4)
 
-	headerStyle = lipgloss.NewStyle().Background(lipgloss.Color("27")).Bold(true).PaddingLeft(1).PaddingRight(1).MarginBottom(1)
+	headerStyle = lipgloss.NewStyle().Background(lipgloss.Color("27")).Bold(true).PaddingLeft(1).PaddingRight(1)
 
 	bodyStyle = lipgloss.NewStyle().Padding(1)
 )
@@ -187,10 +187,12 @@ var (
 func (m *siftModel) View() string {
 	s := ""
 
-	s += headerStyle.Render("\u2207 sift")
-	s += "\n"
+	var header string
+	header += headerStyle.Render("\u2207 sift")
+	header += dimmed.MarginLeft(1).Render("v0.1.0")
+	header += "\n\n"
 
-	s += dimmed.Render()
+	s += header
 
 	if !m.started {
 		s += "Waiting for test results..."
@@ -207,11 +209,8 @@ func (m *siftModel) View() string {
 		footer += lipgloss.NewStyle().Padding(1).Render(m.help.View(keys))
 
 		testViewHeight := lipgloss.Height(testView)
-		if testViewHeight < m.windowSize.Height {
-			m.viewport.Height = testViewHeight
-		} else {
-			m.viewport.Height = m.windowSize.Height - lipgloss.Height(footer)
-		}
+		maxTestViewHeight := m.windowSize.Height - lipgloss.Height(footer) - lipgloss.Height(header) - 2
+		m.viewport.Height = min(testViewHeight, maxTestViewHeight)
 
 		s += m.viewport.View()
 
