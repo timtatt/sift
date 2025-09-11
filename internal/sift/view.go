@@ -350,7 +350,7 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 					log = styleSecondary.Render(log)
 				}
 
-				log = styleLog.Render(log)
+				log = styleLog.Width(m.viewport.Width - 2).Render(log)
 
 				vb.Add(log)
 				vb.AddLine()
