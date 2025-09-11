@@ -74,36 +74,42 @@ func (m *siftModel) CursorDown() {
 	}
 
 	// check if there are more logs we can highlight.
-	// check if this is not the last test
-
-	if (!toggled || m.cursor.log == logCount-1) && m.cursor.test < m.testManager.GetTestCount()-1 {
-		// go to the next test
-		m.cursor.test++
-		m.cursor.log = 0
-	} else {
+	if toggled && m.cursor.log < logCount-1 {
 		m.cursor.log++
 	}
+
+	if m.cursor.test == m.testManager.GetTestCount()-1 {
+		// this is the last test
+		return
+	}
+
+	// go to the next test
+	m.cursor.test++
+	m.cursor.log = 0
 }
 
 func (m *siftModel) CursorUp() {
-	if m.cursor.log == 0 && m.cursor.test > 0 {
-		// go to the next test
-		m.cursor.test--
-
-		test := m.testManager.GetTest(m.cursor.test)
-
-		if m.toggledTests[test.Ref] {
-			logCount := m.testManager.GetLogCount(test.Ref)
-			m.cursor.log = logCount - 1
-		} else {
-			m.cursor.log = 0
-		}
-
-		// set the log to the last log in previous test
-	} else {
+	if m.cursor.log > 0 {
 		m.cursor.log--
 	}
 
+	if m.cursor.test == 0 {
+		// this is the first test
+		return
+	}
+
+	// go to the next test
+	m.cursor.test--
+
+	test := m.testManager.GetTest(m.cursor.test)
+
+	if m.toggledTests[test.Ref] {
+		// set the log to the last log in previous test
+		logCount := m.testManager.GetLogCount(test.Ref)
+		m.cursor.log = logCount - 1
+	} else {
+		m.cursor.log = 0
+	}
 }
 
 func (m *siftModel) Init() tea.Cmd {
