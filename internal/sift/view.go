@@ -181,7 +181,7 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// if collapsing the tests, set the cursor to the top element
 			if !newState {
-				m.cursor.log = -1
+				m.cursor.log = 0
 			}
 
 		case "zR":
@@ -194,7 +194,7 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			for _, test := range m.testManager.GetTests {
 				m.toggledTests[test.Ref] = false
 			}
-			m.cursor.log = -1
+			m.cursor.log = 0
 		case "za":
 			// toggle over cursor
 			test := m.testManager.GetTest(m.cursor.test)
@@ -208,7 +208,7 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			test := m.testManager.GetTest(m.cursor.test)
 			m.toggledTests[test.Ref] = false
 
-			m.cursor.log = -1
+			m.cursor.log = 0
 		}
 
 		// TODO: use keys here
@@ -230,7 +230,12 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			test := m.testManager.GetTest(m.cursor.test)
 
 			if test != nil {
-				m.toggledTests[test.Ref] = !m.toggledTests[test.Ref]
+				newState := !m.toggledTests[test.Ref]
+				m.toggledTests[test.Ref] = newState
+
+				if !newState {
+					m.cursor.log = 0
+				}
 			}
 
 		}
