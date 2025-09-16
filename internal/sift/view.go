@@ -13,9 +13,16 @@ import (
 	"github.com/timtatt/sift/pkg/viewbuilder"
 )
 
+type testState struct {
+	toggled     bool
+	viewportPos int
+}
+
 type siftModel struct {
-	testManager  *tests.TestManager
-	toggledTests map[tests.TestReference]bool
+	opts SiftOptions
+
+	testManager *tests.TestManager
+	testState   map[tests.TestReference]*testState
 
 	cursor *cursor
 
@@ -37,11 +44,12 @@ type cursor struct {
 	log  int // tracks the cursor log line
 }
 
-func NewSiftModel() *siftModel {
+func NewSiftModel(opts SiftOptions) *siftModel {
 	return &siftModel{
-		testManager:  tests.NewTestManager(),
-		toggledTests: make(map[tests.TestReference]bool),
-		help:         help.New(),
+		opts:        opts,
+		testManager: tests.NewTestManager(),
+		testState:   make(map[tests.TestReference]*testState),
+		help:        help.New(),
 		cursor: &cursor{
 			test: 0,
 			log:  0,
@@ -66,15 +74,15 @@ func (m *siftModel) NextTest() {
 func (m *siftModel) CursorDown() {
 	test := m.testManager.GetTest(m.cursor.test)
 
-	toggled := m.toggledTests[test.Ref]
+	state := m.testState[test.Ref]
 
 	logCount := 0
-	if toggled {
+	if state.toggled {
 		logCount = m.testManager.GetLogCount(test.Ref)
 	}
 
 	// check if there are more logs we can highlight.
-	if toggled && m.cursor.log < logCount-1 {
+	if state.toggled && m.cursor.log < logCount-1 {
 		m.cursor.log++
 		return
 	}
@@ -87,6 +95,17 @@ func (m *siftModel) CursorDown() {
 	// go to the next test
 	m.cursor.test++
 	m.cursor.log = 0
+}
+
+// determine the cursor position with respect to the viewport
+func (m *siftModel) GetCursorPos() int {
+	test := m.testManager.GetTest(m.cursor.test)
+	ts, ok := m.testState[test.Ref]
+	if !ok {
+		return 0
+	}
+
+	return ts.viewportPos + m.cursor.log
 }
 
 func (m *siftModel) CursorUp() {
@@ -105,7 +124,7 @@ func (m *siftModel) CursorUp() {
 
 	test := m.testManager.GetTest(m.cursor.test)
 
-	if m.toggledTests[test.Ref] {
+	if state := m.testState[test.Ref]; state.toggled {
 		// set the log to the last log in previous test
 		logCount := m.testManager.GetLogCount(test.Ref)
 		m.cursor.log = logCount - 1
@@ -171,7 +190,6 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.BufferKey(msg)
 
 		// TODO: rewrite how the cursor is managed
-		// 1. do we want the cursor to count for the empty lines inbetween tests
 		// 2. can we get the state to me managed more centrally
 
 		switch m.LastKeys(2) {
@@ -179,42 +197,43 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// toggle recursively
 			parentTest := m.testManager.GetTest(m.cursor.test)
 
-			newState := !m.toggledTests[parentTest.Ref]
-			m.toggledTests[parentTest.Ref] = newState
+			newToggleState := !m.testState[parentTest.Ref].toggled
+			m.testState[parentTest.Ref].toggled = newToggleState
+
 			for _, test := range m.testManager.GetTests {
 				if test.Ref.Package == parentTest.Ref.Package && strings.HasPrefix(test.Ref.Test, parentTest.Ref.Test) {
-					m.toggledTests[test.Ref] = newState
+					m.testState[test.Ref].toggled = newToggleState
 				}
 			}
 
 			// if collapsing the tests, set the cursor to the top element
-			if !newState {
+			if !newToggleState {
 				m.cursor.log = 0
 			}
 
 		case "zR":
 			// expand all
 			for _, test := range m.testManager.GetTests {
-				m.toggledTests[test.Ref] = true
+				m.testState[test.Ref].toggled = true
 			}
 		case "zM":
 			// collapse all
 			for _, test := range m.testManager.GetTests {
-				m.toggledTests[test.Ref] = false
+				m.testState[test.Ref].toggled = false
 			}
 			m.cursor.log = 0
 		case "za":
 			// toggle over cursor
 			test := m.testManager.GetTest(m.cursor.test)
-			m.toggledTests[test.Ref] = !m.toggledTests[test.Ref]
+			m.testState[test.Ref].toggled = !m.testState[test.Ref].toggled
 		case "zo":
 			// expand over cursor
 			test := m.testManager.GetTest(m.cursor.test)
-			m.toggledTests[test.Ref] = true
+			m.testState[test.Ref].toggled = true
 		case "zc":
 			// collapse over cursor
 			test := m.testManager.GetTest(m.cursor.test)
-			m.toggledTests[test.Ref] = false
+			m.testState[test.Ref].toggled = false
 
 			m.cursor.log = 0
 		}
@@ -238,10 +257,10 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			test := m.testManager.GetTest(m.cursor.test)
 
 			if test != nil {
-				newState := !m.toggledTests[test.Ref]
-				m.toggledTests[test.Ref] = newState
+				newToggleState := !m.testState[test.Ref].toggled
+				m.testState[test.Ref].toggled = newToggleState
 
-				if !newState {
+				if !newToggleState {
 					m.cursor.log = 0
 				}
 			}
@@ -260,7 +279,9 @@ func (m *siftModel) View() string {
 
 	var header string
 	header += styleHeader.Render("\u2207 sift")
-	header += fmt.Sprintf("[%d, %d]", m.cursor.test, m.cursor.log)
+	if m.opts.Debug {
+		header += fmt.Sprintf(" [%d, %d] %d", m.cursor.test, m.cursor.log, m.GetCursorPos())
+	}
 	header += "\n\n"
 
 	s += header
@@ -319,6 +340,12 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 
 	for i, test := range m.testManager.GetTests {
 
+		ts, ok := m.testState[test.Ref]
+		if !ok {
+			ts = &testState{}
+			m.testState[test.Ref] = ts
+		}
+
 		highlighted := m.cursor.test == i
 
 		var statusIcon string
@@ -347,12 +374,15 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 			)
 		}
 
+		// capture the viewport position
+		ts.viewportPos = vb.Lines()
+
 		// Render the row
-		vb.Add(fmt.Sprintf("%s %s %s", statusIcon, testName, elapsed))
+		vb.Add(fmt.Sprintf("%s %s %s [%d]", statusIcon, testName, elapsed, ts.viewportPos))
 		vb.AddLine()
 
 		// print the logs
-		if m.toggledTests[test.Ref] {
+		if ts.toggled {
 			logs := m.testManager.GetLogs(test.Ref)
 
 			for logIdx, log := range logs {
