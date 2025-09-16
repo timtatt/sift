@@ -1,8 +1,10 @@
 package samples
 
 import (
+	"crypto/rand"
 	"log"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -13,6 +15,21 @@ type TestSuite struct {
 
 func (s *TestSuite) SetupSuite() {
 	log.Println("this is a log from the suite setup")
+
+	go func() {
+		tick := time.NewTicker(time.Millisecond * 50)
+
+		for {
+			select {
+			case <-s.T().Context().Done():
+				log.Println("stopping application")
+				return
+			case <-tick.C:
+				log.Println("some application log", rand.Text())
+			}
+		}
+	}()
+
 }
 
 func (s *TestSuite) SetupTest() {
@@ -30,6 +47,8 @@ func (s *TestSuite) TearDownSuite() {
 func (s *TestSuite) TestExample() {
 	log.Println("this is a log from the test example")
 	s.Equal(1, 1, "they should be equal")
+
+	time.Sleep(time.Second * 1)
 }
 
 func TestTestSuite(t *testing.T) {
