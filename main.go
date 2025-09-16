@@ -2,7 +2,8 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
+	"os"
 
 	"github.com/timtatt/sift/internal/sift"
 )
@@ -16,7 +17,8 @@ func main() {
 	err := sift.Run(ctx)
 
 	if err != nil {
-		log.Fatal(err)
+		fmt.Printf("ERROR: %s\n", err.Error())
+		os.Exit(1)
 	}
 
 }

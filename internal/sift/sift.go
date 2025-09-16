@@ -4,12 +4,14 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/timtatt/sift/internal/tests"
+	"golang.org/x/sync/errgroup"
 )
 
 type sift struct {
@@ -26,7 +28,7 @@ func (s *sift) ScanStdin() error {
 		err := json.Unmarshal(scanner.Bytes(), &line)
 		if err != nil {
 			// TODO: write to a temp dir log
-			continue
+			return errors.New("unable to parse json input. ensure to use the `-json` flag when running go tests")
 		}
 
 		s.model.testManager.AddTestOutput(line)
@@ -65,6 +67,8 @@ func Run(ctx context.Context) error {
 
 	fps := 24
 
+	g, ctx := errgroup.WithContext(ctx)
+
 	m := NewSiftModel()
 	p := tea.NewProgram(
 		m,
@@ -78,17 +82,27 @@ func Run(ctx context.Context) error {
 		program: p,
 	}
 
-	go func() {
+	g.Go(func() error {
 		if err := sift.ScanStdin(); err != nil {
-			cancel()
+			return err
 		}
-	}()
 
-	go sift.Frame(ctx, fps)
+		return nil
+	})
 
-	if _, err := p.Run(); err != nil {
-		return err
-	}
+	g.Go(func() error {
+		if _, err := p.Run(); err != nil {
+			return err
+		}
 
-	return nil
+		return nil
+	})
+
+	g.Go(func() error {
+		sift.Frame(ctx, fps)
+
+		return nil
+	})
+
+	return g.Wait()
 }
