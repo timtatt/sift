@@ -100,12 +100,24 @@ func (m *siftModel) CursorDown() {
 // determine the cursor position with respect to the viewport
 func (m *siftModel) GetCursorPos() int {
 	test := m.testManager.GetTest(m.cursor.test)
-	ts, ok := m.testState[test.Ref]
-	if !ok {
-		return 0
+
+	if test == nil {
+		return -1
 	}
 
-	return ts.viewportPos + m.cursor.log
+	ts, ok := m.testState[test.Ref]
+	if !ok {
+		return -1
+	}
+
+	pos := ts.viewportPos + m.cursor.log
+
+	if ts.toggled {
+		// if the test is toggled it has 1 extra line
+		pos += 1
+	}
+
+	return pos
 }
 
 func (m *siftModel) CursorUp() {
@@ -161,6 +173,10 @@ func (m *siftModel) BufferKey(msg tea.KeyMsg) {
 	// add new key to end of buffer
 	m.keyBuffer[len(m.keyBuffer)-1] = msg.String()
 }
+
+const (
+	scrollBuffer = 10
+)
 
 func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var (
@@ -251,8 +267,20 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "up", "k":
 			m.CursorUp()
+
+			// scroll up if selected line is within 'scrollBuffer' of the top
+			cursorDelta := m.viewport.YOffset - m.GetCursorPos() + scrollBuffer
+			if cursorDelta > 0 {
+				m.viewport.ScrollUp(cursorDelta)
+			}
 		case "down", "j":
 			m.CursorDown()
+
+			// scroll down if selected line is within 'scrollBuffer' of the bottom
+			cursorDelta := m.GetCursorPos() - m.viewport.YOffset - m.viewport.Height + scrollBuffer
+			if cursorDelta > 0 {
+				m.viewport.ScrollDown(cursorDelta)
+			}
 		case "enter", " ":
 			test := m.testManager.GetTest(m.cursor.test)
 
@@ -280,7 +308,8 @@ func (m *siftModel) View() string {
 	var header string
 	header += styleHeader.Render("\u2207 sift")
 	if m.opts.Debug {
-		header += fmt.Sprintf(" [%d, %d] %d", m.cursor.test, m.cursor.log, m.GetCursorPos())
+		header += fmt.Sprintf(" cursor: [%d, %d] %d | yoffset: %d, bottom %d", m.cursor.test, m.cursor.log, m.GetCursorPos(), m.viewport.YOffset, m.viewport.YOffset+m.viewport.Height)
+
 	}
 	header += "\n\n"
 
