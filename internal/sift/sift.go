@@ -60,7 +60,11 @@ func (s *sift) Frame(ctx context.Context, tps int) {
 	}
 }
 
-func Run(ctx context.Context) error {
+type SiftOptions struct {
+	Debug bool
+}
+
+func Run(ctx context.Context, opts SiftOptions) error {
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -69,7 +73,7 @@ func Run(ctx context.Context) error {
 
 	g, ctx := errgroup.WithContext(ctx)
 
-	m := NewSiftModel()
+	m := NewSiftModel(opts)
 	p := tea.NewProgram(
 		m,
 		tea.WithFPS(fps),
@@ -95,6 +99,7 @@ func Run(ctx context.Context) error {
 			return err
 		}
 
+		cancel()
 		return nil
 	})
 

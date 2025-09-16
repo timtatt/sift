@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
 
@@ -14,7 +15,13 @@ func main() {
 
 	ctx := context.Background()
 
-	err := sift.Run(ctx)
+	var debug bool
+	flag.BoolVar(&debug, "debug", false, "enable debug view")
+	flag.Parse()
+
+	err := sift.Run(ctx, sift.SiftOptions{
+		Debug: debug,
+	})
 
 	if err != nil {
 		fmt.Printf("ERROR: %s\n", err.Error())
