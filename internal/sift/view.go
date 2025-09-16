@@ -175,7 +175,7 @@ func (m *siftModel) BufferKey(msg tea.KeyMsg) {
 }
 
 const (
-	scrollBuffer = 10
+	scrollBuffer = 5
 )
 
 func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -258,9 +258,21 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "{":
 			m.PrevTest()
+
+			// scroll up if selected line is within 'scrollBuffer' of the top
+			cursorDelta := m.viewport.YOffset - m.GetCursorPos() + scrollBuffer
+			if cursorDelta > 0 {
+				m.viewport.ScrollUp(cursorDelta)
+			}
 		case "}":
 			m.NextTest()
-		// TODO: change this keymap
+
+			// scroll down if selected line is within 'scrollBuffer' of the bottom
+			cursorDelta := m.GetCursorPos() - m.viewport.YOffset - m.viewport.Height + scrollBuffer
+			if cursorDelta > 0 {
+				m.viewport.ScrollDown(cursorDelta)
+			}
+
 		case "?":
 			m.help.ShowAll = !m.help.ShowAll
 		case "ctrl+c", "q":
