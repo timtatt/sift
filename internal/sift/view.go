@@ -231,17 +231,23 @@ func (m *siftModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m *siftModel) LastKeys(n int) string {
-	if n > len(m.keyBuffer) {
-		n = len(m.keyBuffer)
+func (m *siftModel) LastKeysMatch(binding key.Binding) bool {
+
+	for _, key := range binding.Keys() {
+		n := len(key)
+
+		if n > len(m.keyBuffer) {
+			continue
+		}
+
+		lastNKeys := strings.Join(m.keyBuffer[len(m.keyBuffer)-n:], "")
+
+		if lastNKeys == key {
+			return true
+		}
 	}
 
-	var s string
-	for i := len(m.keyBuffer) - n; i < len(m.keyBuffer); i++ {
-		s += m.keyBuffer[i]
-	}
-
-	return s
+	return false
 }
 
 func (m *siftModel) BufferKey(msg tea.KeyMsg) {
@@ -320,8 +326,9 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// TODO: rewrite how the cursor is managed
 		// 2. can we get the state to me managed more centrally
 
-		switch m.LastKeys(2) {
-		case "zA":
+		// Handle two-character key sequences using the ring buffer
+		switch {
+		case m.LastKeysMatch(keys.ToggleTestsRecursively):
 			// toggle recursively
 			parentTest := m.testManager.GetTest(m.cursor.test)
 
@@ -339,26 +346,26 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor.log = 0
 			}
 
-		case "zR":
+		case m.LastKeysMatch(keys.ExpandAllTests):
 			// expand all
 			for _, test := range m.testManager.GetTests {
 				m.testState[test.Ref].toggled = true
 			}
-		case "zM":
+		case m.LastKeysMatch(keys.CollapseAllTests):
 			// collapse all
 			for _, test := range m.testManager.GetTests {
 				m.testState[test.Ref].toggled = false
 			}
 			m.cursor.log = 0
-		case "za":
+		case m.LastKeysMatch(keys.ToggleTest):
 			// toggle over cursor
 			test := m.testManager.GetTest(m.cursor.test)
 			m.testState[test.Ref].toggled = !m.testState[test.Ref].toggled
-		case "zo":
+		case m.LastKeysMatch(keys.ExpandTest):
 			// expand over cursor
 			test := m.testManager.GetTest(m.cursor.test)
 			m.testState[test.Ref].toggled = true
-		case "zc":
+		case m.LastKeysMatch(keys.CollapseTest):
 			// collapse over cursor
 			test := m.testManager.GetTest(m.cursor.test)
 			m.testState[test.Ref].toggled = false
@@ -410,7 +417,7 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if cursorDelta > 0 {
 				m.viewport.ScrollDown(cursorDelta)
 			}
-		case key.Matches(msg, keys.ToggleTest):
+		case key.Matches(msg, keys.ToggleTestAlt):
 			test := m.testManager.GetTest(m.cursor.test)
 
 			if test != nil {

@@ -15,6 +15,7 @@ type keyMap struct {
 	ExpandAllTests         key.Binding
 	CollapseAllTests       key.Binding
 	ToggleTest             key.Binding
+	ToggleTestAlt          key.Binding
 	ExpandTest             key.Binding
 	CollapseTest           key.Binding
 	Search                 key.Binding
@@ -31,7 +32,7 @@ func (k keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.PrevTest, k.NextTest},
 		{k.viewport.Up, k.viewport.Down, k.viewport.HalfPageUp, k.viewport.HalfPageDown},
-		{k.ToggleTest, k.ExpandTest, k.CollapseTest},
+		{k.ToggleTest, k.ToggleTestAlt, k.ExpandTest, k.CollapseTest},
 		{k.ToggleTestsRecursively, k.ExpandAllTests, k.CollapseAllTests},
 		{k.Search, k.ClearSearch, k.Help, k.Quit},
 	}
@@ -86,8 +87,12 @@ var (
 			key.WithHelp("zM", "collapse all"),
 		),
 		ToggleTest: key.NewBinding(
-			key.WithKeys("za", "enter", " "),
-			key.WithHelp("za/enter/space", "toggle test"),
+			key.WithKeys("za"),
+			key.WithHelp("za", "toggle test"),
+		),
+		ToggleTestAlt: key.NewBinding(
+			key.WithKeys("enter", " "),
+			key.WithHelp("enter/space", "toggle test"),
 		),
 		ExpandTest: key.NewBinding(
 			key.WithKeys("zo"),
