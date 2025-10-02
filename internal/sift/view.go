@@ -53,7 +53,7 @@ func NewSiftModel(opts SiftOptions) *siftModel {
 	ti := textinput.New()
 	ti.Placeholder = "search for tests"
 	ti.PlaceholderStyle = styleSecondary
-	ti.Prompt = "/"
+	ti.Prompt = "Search: /"
 	ti.CharLimit = 100
 
 	return &siftModel{
@@ -280,6 +280,7 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			m.help.Width = msg.Width
 			m.viewport.Width = msg.Width
+			m.searchInput.Width = msg.Width
 		}
 	case tea.KeyMsg:
 		// capture the most recent keypress into the ring buffer
@@ -441,9 +442,9 @@ func (m *siftModel) View() string {
 	}
 	// Display search input when in search mode
 	if m.searchInput.Focused() {
-		header += "\n" + m.searchInput.View()
+		header += "\n\n" + m.searchInput.View()
 	} else if m.searchInput.Value() != "" {
-		header += "\n" + fmt.Sprintf("Filtered by: /%s (press esc to clear)", m.searchInput.Value())
+		header += "\n\n" + fmt.Sprintf("Search: /%s", m.searchInput.Value()) + styleSecondary.Render(" (esc to clear)")
 	}
 	header += "\n\n"
 
@@ -559,7 +560,10 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 
 		ts.viewportPos = vb.Lines()
 
-		vb.Add(fmt.Sprintf("%s%s %s %s [%d]", indent, statusIcon, testName, elapsed, ts.viewportPos))
+		vb.Add(fmt.Sprintf("%s%s %s %s", indent, statusIcon, testName, elapsed))
+		if m.opts.Debug {
+			vb.Add(fmt.Sprintf(" [%d]", ts.viewportPos))
+		}
 		vb.AddLine()
 
 		// print the logs
