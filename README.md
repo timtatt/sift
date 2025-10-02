@@ -27,11 +27,18 @@ go test ./... -v -json | sift
 
 To see the available keymaps, press `?`. The keymaps are based on vim motion standard keymaps for scrolling and managing folds
 
+#### Search
+
+Press `/` to search and filter tests:
+- Type to filter tests using fuzzy matching (case-insensitive)
+- Press `enter` to exit search mode while keeping the filter active
+- Press `esc` to clear the search filter and show all tests
+
 ## Feature Roadmap
 
 - [ ] Accordion levels based on '/'
 - [ ] Nesting the child tests
-- [ ] Search for tests with '/'
+- [x] Search for tests with '/'
 - [ ] Filter tests by status (pass/fail/skip)
 - [ ] Support for light mode
 - [ ] Add inline mode to show test summary
