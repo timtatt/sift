@@ -33,6 +33,15 @@ type TestNode struct {
 	Status  string // pass, fail, run
 }
 
+// Filters out redundant Go test output lines like "=== RUN" and "--- PASS/FAIL/SKIP"
+func shouldSkipLogLine(line string) bool {
+	trimmed := strings.TrimLeft(line, " \t")
+	return strings.HasPrefix(trimmed, "=== RUN") ||
+		strings.HasPrefix(trimmed, "--- PASS:") ||
+		strings.HasPrefix(trimmed, "--- FAIL:") ||
+		strings.HasPrefix(trimmed, "--- SKIP:")
+}
+
 // JSON output from `go test -json`
 type TestOutputLine struct {
 	Time    time.Time `json:"time"`
@@ -51,12 +60,16 @@ func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
 
 	switch testOutput.Action {
 	case "output":
+		log := strings.TrimRight(testOutput.Output, "\n")
+
+		if shouldSkipLogLine(log) {
+			return
+		}
+
 		tm.testLogLock.Lock()
 		defer tm.testLogLock.Unlock()
 
 		_, ok := tm.testLogs[testRef]
-
-		log := strings.TrimRight(testOutput.Output, "\n")
 
 		if ok {
 			tm.testLogs[testRef] = append(tm.testLogs[testRef], log)
