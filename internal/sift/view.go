@@ -52,6 +52,7 @@ type cursor struct {
 func NewSiftModel(opts SiftOptions) *siftModel {
 	ti := textinput.New()
 	ti.Placeholder = "search for tests"
+	ti.PlaceholderStyle = styleSecondary
 	ti.Prompt = "/"
 	ti.CharLimit = 100
 
@@ -68,17 +69,75 @@ func NewSiftModel(opts SiftOptions) *siftModel {
 	}
 }
 
+// isTestVisible checks if a test passes the current search filter
+func (m *siftModel) isTestVisible(testIndex int) bool {
+	test := m.testManager.GetTest(testIndex)
+	if test == nil {
+		return false
+	}
+
+	searchQuery := m.searchInput.Value()
+	if searchQuery != "" && !fuzzy.MatchFold(searchQuery, test.Ref.Test) {
+		return false
+	}
+
+	return true
+}
+
+// ensureCursorVisible ensures the cursor is on a visible test
+// If the current test is hidden, moves to the nearest visible test
+func (m *siftModel) ensureCursorVisible() {
+	// If current test is visible, we're good
+	if m.isTestVisible(m.cursor.test) {
+		return
+	}
+
+	// Try to find the next visible test
+	for i := m.cursor.test + 1; i < m.testManager.GetTestCount(); i++ {
+		if m.isTestVisible(i) {
+			m.cursor.test = i
+			m.cursor.log = 0
+			return
+		}
+	}
+
+	// If no test found forward, try backward
+	for i := m.cursor.test - 1; i >= 0; i-- {
+		if m.isTestVisible(i) {
+			m.cursor.test = i
+			m.cursor.log = 0
+			return
+		}
+	}
+
+	// If no visible tests at all, reset to 0
+	m.cursor.test = 0
+	m.cursor.log = 0
+}
+
 func (m *siftModel) PrevTest() {
 	if m.cursor.test > 0 {
-		m.cursor.test--
-		m.cursor.log = 0
+		// Find the previous visible test
+		for i := m.cursor.test - 1; i >= 0; i-- {
+			if m.isTestVisible(i) {
+				m.cursor.test = i
+				m.cursor.log = 0
+				return
+			}
+		}
 	}
 }
 
 func (m *siftModel) NextTest() {
 	if m.cursor.test < m.testManager.GetTestCount()-1 {
-		m.cursor.test++
-		m.cursor.log = 0
+		// Find the next visible test
+		for i := m.cursor.test + 1; i < m.testManager.GetTestCount(); i++ {
+			if m.isTestVisible(i) {
+				m.cursor.test = i
+				m.cursor.log = 0
+				return
+			}
+		}
 	}
 }
 
@@ -103,9 +162,14 @@ func (m *siftModel) CursorDown() {
 		return
 	}
 
-	// go to the next test
-	m.cursor.test++
-	m.cursor.log = 0
+	// go to the next visible test
+	for i := m.cursor.test + 1; i < m.testManager.GetTestCount(); i++ {
+		if m.isTestVisible(i) {
+			m.cursor.test = i
+			m.cursor.log = 0
+			return
+		}
+	}
 }
 
 // determine the cursor position with respect to the viewport
@@ -142,17 +206,21 @@ func (m *siftModel) CursorUp() {
 		return
 	}
 
-	// go to the next test
-	m.cursor.test--
+	// go to the previous visible test
+	for i := m.cursor.test - 1; i >= 0; i-- {
+		if m.isTestVisible(i) {
+			m.cursor.test = i
 
-	test := m.testManager.GetTest(m.cursor.test)
-
-	if state := m.testState[test.Ref]; state.toggled {
-		// set the log to the last log in previous test
-		logCount := m.testManager.GetLogCount(test.Ref)
-		m.cursor.log = logCount - 1
-	} else {
-		m.cursor.log = 0
+			test := m.testManager.GetTest(m.cursor.test)
+			if state := m.testState[test.Ref]; state.toggled {
+				// set the log to the last log in previous test
+				logCount := m.testManager.GetLogCount(test.Ref)
+				m.cursor.log = logCount - 1
+			} else {
+				m.cursor.log = 0
+			}
+			return
+		}
 	}
 }
 
@@ -224,14 +292,17 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Exit search mode and clear query
 				m.searchInput.Blur()
 				m.searchInput.SetValue("")
+				m.ensureCursorVisible()
 			case "enter":
 				// Exit search mode but keep the filter
 				m.searchInput.Blur()
+				m.ensureCursorVisible()
 			default:
 				// Update the textinput with the key
 				var inputCmd tea.Cmd
 				m.searchInput, inputCmd = m.searchInput.Update(msg)
 				cmds = append(cmds, inputCmd)
+				m.ensureCursorVisible()
 			}
 			// Don't process other keys when in search mode
 			return m, tea.Batch(cmds...)
@@ -320,6 +391,7 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Clear search filter when esc is pressed and not in search mode
 			if m.searchInput.Value() != "" {
 				m.searchInput.SetValue("")
+				m.ensureCursorVisible()
 			}
 		case "up", "k":
 			m.CursorUp()
