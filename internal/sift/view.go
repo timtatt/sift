@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -288,13 +289,13 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Handle search mode
 		if m.searchInput.Focused() {
-			switch msg.String() {
-			case "esc", "ctrl+c":
+			switch {
+			case key.Matches(msg, keys.Quit):
 				// Exit search mode and clear query
 				m.searchInput.Blur()
 				m.searchInput.SetValue("")
 				m.ensureCursorVisible()
-			case "enter":
+			case msg.String() == "enter":
 				// Exit search mode but keep the filter
 				m.searchInput.Blur()
 				m.ensureCursorVisible()
@@ -310,7 +311,7 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		// Check if we should enter search mode
-		if msg.String() == "/" {
+		if key.Matches(msg, keys.Search) {
 			m.searchInput.Focus()
 			m.searchInput.SetValue("")
 			return m, textinput.Blink
@@ -365,9 +366,8 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.cursor.log = 0
 		}
 
-		// TODO: use keys here
-		switch msg.String() {
-		case "{":
+		switch {
+		case key.Matches(msg, keys.PrevTest):
 			m.PrevTest()
 
 			// scroll up if selected line is within 'scrollBuffer' of the top
@@ -375,7 +375,7 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if cursorDelta > 0 {
 				m.viewport.ScrollUp(cursorDelta)
 			}
-		case "}":
+		case key.Matches(msg, keys.NextTest):
 			m.NextTest()
 
 			// scroll down if selected line is within 'scrollBuffer' of the bottom
@@ -384,17 +384,17 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.viewport.ScrollDown(cursorDelta)
 			}
 
-		case "?":
+		case key.Matches(msg, keys.Help):
 			m.help.ShowAll = !m.help.ShowAll
-		case "ctrl+c", "q":
+		case key.Matches(msg, keys.Quit):
 			return m, tea.Quit
-		case "esc":
+		case key.Matches(msg, keys.ClearSearch):
 			// Clear search filter when esc is pressed and not in search mode
 			if m.searchInput.Value() != "" {
 				m.searchInput.SetValue("")
 				m.ensureCursorVisible()
 			}
-		case "up", "k":
+		case key.Matches(msg, keys.Up):
 			m.CursorUp()
 
 			// scroll up if selected line is within 'scrollBuffer' of the top
@@ -402,7 +402,7 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if cursorDelta > 0 {
 				m.viewport.ScrollUp(cursorDelta)
 			}
-		case "down", "j":
+		case key.Matches(msg, keys.Down):
 			m.CursorDown()
 
 			// scroll down if selected line is within 'scrollBuffer' of the bottom
@@ -410,7 +410,7 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if cursorDelta > 0 {
 				m.viewport.ScrollDown(cursorDelta)
 			}
-		case "enter", " ":
+		case key.Matches(msg, keys.ToggleTest):
 			test := m.testManager.GetTest(m.cursor.test)
 
 			if test != nil {
