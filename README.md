@@ -9,7 +9,7 @@ Sift solves the problem of verbose Go test logs by allowing you to show/hide the
 ## Installation
 
 ```bash
-go install github.com/timtatt/sift@v0.2.1
+go install github.com/timtatt/sift@v0.3.0
 ```
 
 ## Usage

@@ -69,7 +69,7 @@ func Run(ctx context.Context, opts SiftOptions) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	fps := 24
+	fps := 120
 
 	g, ctx := errgroup.WithContext(ctx)
 
