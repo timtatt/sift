@@ -51,7 +51,7 @@ type cursor struct {
 
 func NewSiftModel(opts SiftOptions) *siftModel {
 	ti := textinput.New()
-	ti.Placeholder = "search tests..."
+	ti.Placeholder = "search for tests"
 	ti.Prompt = "/"
 	ti.CharLimit = 100
 
@@ -207,6 +207,7 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.help.Width = msg.Width
 			m.viewport = viewport.New(msg.Width, msg.Height)
 			m.viewport.KeyMap = keys.viewport
+			m.searchInput.Width = msg.Width
 			m.ready = true
 		} else {
 			m.help.Width = msg.Width
