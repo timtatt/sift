@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -39,8 +40,7 @@ type siftModel struct {
 	windowSize tea.WindowSizeMsg
 
 	// search functionality
-	searchMode  bool
-	searchQuery string
+	searchInput textinput.Model
 }
 
 type cursor struct {
@@ -49,6 +49,11 @@ type cursor struct {
 }
 
 func NewSiftModel(opts SiftOptions) *siftModel {
+	ti := textinput.New()
+	ti.Placeholder = "search tests..."
+	ti.Prompt = "/"
+	ti.CharLimit = 100
+
 	return &siftModel{
 		opts:        opts,
 		testManager: tests.NewTestManager(),
@@ -58,6 +63,7 @@ func NewSiftModel(opts SiftOptions) *siftModel {
 			test: 0,
 			log:  0,
 		},
+		searchInput: ti,
 	}
 }
 
@@ -210,35 +216,30 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.BufferKey(msg)
 
 		// Handle search mode
-		if m.searchMode {
+		if m.searchInput.Focused() {
 			switch msg.String() {
 			case "esc", "ctrl+c":
 				// Exit search mode and clear query
-				m.searchMode = false
-				m.searchQuery = ""
-			case "backspace":
-				// Remove last character from search query
-				if len(m.searchQuery) > 0 {
-					m.searchQuery = m.searchQuery[:len(m.searchQuery)-1]
-				}
+				m.searchInput.Blur()
+				m.searchInput.SetValue("")
 			case "enter":
 				// Exit search mode but keep the filter
-				m.searchMode = false
+				m.searchInput.Blur()
 			default:
-				// Add character to search query if it's a single character
-				if len(msg.String()) == 1 {
-					m.searchQuery += msg.String()
-				}
+				// Update the textinput with the key
+				var inputCmd tea.Cmd
+				m.searchInput, inputCmd = m.searchInput.Update(msg)
+				cmds = append(cmds, inputCmd)
 			}
 			// Don't process other keys when in search mode
-			return m, nil
+			return m, tea.Batch(cmds...)
 		}
 
 		// Check if we should enter search mode
 		if msg.String() == "/" {
-			m.searchMode = true
-			m.searchQuery = ""
-			return m, nil
+			m.searchInput.Focus()
+			m.searchInput.SetValue("")
+			return m, textinput.Blink
 		}
 
 		// TODO: rewrite how the cursor is managed
@@ -315,8 +316,8 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "esc":
 			// Clear search filter when esc is pressed and not in search mode
-			if m.searchQuery != "" {
-				m.searchQuery = ""
+			if m.searchInput.Value() != "" {
+				m.searchInput.SetValue("")
 			}
 		case "up", "k":
 			m.CursorUp()
@@ -365,10 +366,10 @@ func (m *siftModel) View() string {
 
 	}
 	// Display search input when in search mode
-	if m.searchMode {
-		header += "\n" + fmt.Sprintf("Search: /%s", m.searchQuery)
-	} else if m.searchQuery != "" {
-		header += "\n" + fmt.Sprintf("Filtered by: /%s (press esc to clear)", m.searchQuery)
+	if m.searchInput.Focused() {
+		header += "\n" + m.searchInput.View()
+	} else if m.searchInput.Value() != "" {
+		header += "\n" + fmt.Sprintf("Filtered by: /%s (press esc to clear)", m.searchInput.Value())
 	}
 	header += "\n\n"
 
@@ -470,7 +471,8 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 		}
 
 		// Filter tests based on search query
-		if m.searchQuery != "" && !fuzzyMatch(test.Ref.Test, m.searchQuery) {
+		searchQuery := m.searchInput.Value()
+		if searchQuery != "" && !fuzzyMatch(test.Ref.Test, searchQuery) {
 			continue
 		}
 
