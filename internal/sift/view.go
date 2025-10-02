@@ -37,6 +37,10 @@ type siftModel struct {
 	help help.Model
 
 	windowSize tea.WindowSizeMsg
+
+	// search functionality
+	searchMode  bool
+	searchQuery string
 }
 
 type cursor struct {
@@ -205,6 +209,38 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// capture the most recent keypress into the ring buffer
 		m.BufferKey(msg)
 
+		// Handle search mode
+		if m.searchMode {
+			switch msg.String() {
+			case "esc", "ctrl+c":
+				// Exit search mode and clear query
+				m.searchMode = false
+				m.searchQuery = ""
+			case "backspace":
+				// Remove last character from search query
+				if len(m.searchQuery) > 0 {
+					m.searchQuery = m.searchQuery[:len(m.searchQuery)-1]
+				}
+			case "enter":
+				// Exit search mode but keep the filter
+				m.searchMode = false
+			default:
+				// Add character to search query if it's a single character
+				if len(msg.String()) == 1 {
+					m.searchQuery += msg.String()
+				}
+			}
+			// Don't process other keys when in search mode
+			return m, nil
+		}
+
+		// Check if we should enter search mode
+		if msg.String() == "/" {
+			m.searchMode = true
+			m.searchQuery = ""
+			return m, nil
+		}
+
 		// TODO: rewrite how the cursor is managed
 		// 2. can we get the state to me managed more centrally
 
@@ -277,6 +313,11 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.help.ShowAll = !m.help.ShowAll
 		case "ctrl+c", "q":
 			return m, tea.Quit
+		case "esc":
+			// Clear search filter when esc is pressed and not in search mode
+			if m.searchQuery != "" {
+				m.searchQuery = ""
+			}
 		case "up", "k":
 			m.CursorUp()
 
@@ -322,6 +363,12 @@ func (m *siftModel) View() string {
 	if m.opts.Debug {
 		header += fmt.Sprintf(" cursor: [%d, %d] %d | yoffset: %d, bottom %d", m.cursor.test, m.cursor.log, m.GetCursorPos(), m.viewport.YOffset, m.viewport.YOffset+m.viewport.Height)
 
+	}
+	// Display search input when in search mode
+	if m.searchMode {
+		header += "\n" + fmt.Sprintf("Search: /%s", m.searchQuery)
+	} else if m.searchQuery != "" {
+		header += "\n" + fmt.Sprintf("Filtered by: /%s (press esc to clear)", m.searchQuery)
 	}
 	header += "\n\n"
 
@@ -385,6 +432,29 @@ func getDisplayName(testName string) string {
 	return testName[lastSlash+1:]
 }
 
+// fuzzyMatch performs case-insensitive fuzzy matching
+// Returns true if all characters in query appear in sequence in text
+func fuzzyMatch(text, query string) bool {
+	if query == "" {
+		return true
+	}
+	
+	text = strings.ToLower(text)
+	query = strings.ToLower(query)
+	
+	textIdx := 0
+	queryIdx := 0
+	
+	for textIdx < len(text) && queryIdx < len(query) {
+		if text[textIdx] == query[queryIdx] {
+			queryIdx++
+		}
+		textIdx++
+	}
+	
+	return queryIdx == len(query)
+}
+
 // TODO: don't like how summary is being handled
 func (m *siftModel) testView() (string, *tests.Summary) {
 	vb := viewbuilder.New()
@@ -397,6 +467,11 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 		if !ok {
 			ts = &testState{}
 			m.testState[test.Ref] = ts
+		}
+
+		// Filter tests based on search query
+		if m.searchQuery != "" && !fuzzyMatch(test.Ref.Test, m.searchQuery) {
+			continue
 		}
 
 		highlighted := m.cursor.test == i
