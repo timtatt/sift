@@ -373,6 +373,18 @@ func (m *siftModel) statusView(summary *tests.Summary) string {
 	return styleOutcomePass.Render("PASSED")
 }
 
+func getIndentLevel(testName string) int {
+	return strings.Count(testName, "/")
+}
+
+func getDisplayName(testName string) string {
+	lastSlash := strings.LastIndex(testName, "/")
+	if lastSlash == -1 {
+		return testName
+	}
+	return testName[lastSlash+1:]
+}
+
 // TODO: don't like how summary is being handled
 func (m *siftModel) testView() (string, *tests.Summary) {
 	vb := viewbuilder.New()
@@ -402,7 +414,9 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 			statusIcon = styleTick.Render("\u2713")
 		}
 
-		testName := test.Ref.Test
+		indentLevel := getIndentLevel(test.Ref.Test)
+		indent := strings.Repeat("  ", indentLevel)
+		testName := getDisplayName(test.Ref.Test)
 
 		if highlighted {
 			testName = styleHighlighted.Render(testName)
@@ -415,11 +429,9 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 			)
 		}
 
-		// capture the viewport position
 		ts.viewportPos = vb.Lines()
 
-		// Render the row
-		vb.Add(fmt.Sprintf("%s %s %s [%d]", statusIcon, testName, elapsed, ts.viewportPos))
+		vb.Add(fmt.Sprintf("%s%s %s %s [%d]", indent, statusIcon, testName, elapsed, ts.viewportPos))
 		vb.AddLine()
 
 		// print the logs
