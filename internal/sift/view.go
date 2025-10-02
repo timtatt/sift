@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/lithammer/fuzzysearch/fuzzy"
 	"github.com/timtatt/sift/internal/tests"
 	"github.com/timtatt/sift/pkg/viewbuilder"
 )
@@ -433,29 +434,6 @@ func getDisplayName(testName string) string {
 	return testName[lastSlash+1:]
 }
 
-// fuzzyMatch performs case-insensitive fuzzy matching
-// Returns true if all characters in query appear in sequence in text
-func fuzzyMatch(text, query string) bool {
-	if query == "" {
-		return true
-	}
-	
-	text = strings.ToLower(text)
-	query = strings.ToLower(query)
-	
-	textIdx := 0
-	queryIdx := 0
-	
-	for textIdx < len(text) && queryIdx < len(query) {
-		if text[textIdx] == query[queryIdx] {
-			queryIdx++
-		}
-		textIdx++
-	}
-	
-	return queryIdx == len(query)
-}
-
 // TODO: don't like how summary is being handled
 func (m *siftModel) testView() (string, *tests.Summary) {
 	vb := viewbuilder.New()
@@ -472,7 +450,7 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 
 		// Filter tests based on search query
 		searchQuery := m.searchInput.Value()
-		if searchQuery != "" && !fuzzyMatch(test.Ref.Test, searchQuery) {
+		if searchQuery != "" && !fuzzy.MatchFold(searchQuery, test.Ref.Test) {
 			continue
 		}
 
