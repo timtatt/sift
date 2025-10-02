@@ -508,6 +508,19 @@ func getDisplayName(testName string) string {
 	return testName[lastSlash+1:]
 }
 
+func getIndentWithLines(indentLevel int) string {
+	if indentLevel == 0 {
+		return ""
+	}
+
+	var indent strings.Builder
+	for range indentLevel {
+		indent.WriteString(styleSecondary.Render("│ "))
+	}
+
+	return indent.String()
+}
+
 // TODO: don't like how summary is being handled
 func (m *siftModel) testView() (string, *tests.Summary) {
 	vb := viewbuilder.New()
@@ -544,7 +557,7 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 		}
 
 		indentLevel := getIndentLevel(test.Ref.Test)
-		indent := strings.Repeat("  ", indentLevel)
+		indent := getIndentWithLines(indentLevel)
 		testName := getDisplayName(test.Ref.Test)
 
 		if highlighted {
@@ -580,7 +593,8 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 
 				log = styleLog.Width(m.viewport.Width - 2).Render(log)
 
-				vb.Add(log)
+				// Add indent lines to logs to show they belong to the test
+				vb.Add(indent + log)
 				vb.AddLine()
 			}
 			vb.AddLine()
