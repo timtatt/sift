@@ -43,11 +43,11 @@ var (
 		viewport: viewport.KeyMap{
 			Down: key.NewBinding(
 				key.WithKeys("ctrl+e"),
-				key.WithHelp("ctrl+y", "scroll down"),
+				key.WithHelp("ctrl+e", "scroll down"),
 			),
 			Up: key.NewBinding(
 				key.WithKeys("ctrl+y"),
-				key.WithHelp("ctrl+y", "scroll down"),
+				key.WithHelp("ctrl+y", "scroll up"),
 			),
 			HalfPageUp: key.NewBinding(
 				key.WithKeys("ctrl+u"),
