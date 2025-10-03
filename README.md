@@ -9,7 +9,7 @@ Sift solves the problem of verbose Go test logs by allowing you to show/hide the
 ## Installation
 
 ```bash
-go install github.com/timtatt/sift@v0.4.0
+go install github.com/timtatt/sift@v0.5.0
 ```
 
 ## Usage
@@ -38,7 +38,6 @@ Press `/` to search and filter tests:
 
 - [ ] Filter tests by status (pass/fail/skip)
 - [ ] Support for light mode
-- [ ] Add inline mode to show test summary
 - [ ] Add animated chars
 
 ## Bug Fixes
