@@ -135,15 +135,17 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 
 			for logIdx, log := range logs {
 
+				prefix := "  "
 				if highlighted && logIdx == m.cursor.log {
-					log = styleHighlightedLog.Render(log)
+					prefix = "> "
+					log = lipgloss.NewStyle().Bold(true).Render(log)
 				} else if !highlighted {
 					log = styleSecondary.Render(log)
 				}
 
 				log = styleLog.Width(m.viewport.Width - 2).Render(log)
 
-				vb.Add(indent + log)
+				vb.Add(indent + prefix + log)
 				vb.AddLine()
 			}
 			vb.AddLine()
