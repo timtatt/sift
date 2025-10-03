@@ -61,7 +61,8 @@ func (s *sift) Frame(ctx context.Context, tps int) {
 }
 
 type SiftOptions struct {
-	Debug bool
+	Debug          bool
+	NonInteractive bool
 }
 
 func Run(ctx context.Context, opts SiftOptions) error {
@@ -74,12 +75,17 @@ func Run(ctx context.Context, opts SiftOptions) error {
 	g, ctx := errgroup.WithContext(ctx)
 
 	m := NewSiftModel(opts)
-	p := tea.NewProgram(
-		m,
+	
+	programOpts := []tea.ProgramOption{
 		tea.WithFPS(fps),
-		tea.WithAltScreen(),
 		tea.WithContext(ctx),
-	)
+	}
+	
+	if !opts.NonInteractive {
+		programOpts = append(programOpts, tea.WithAltScreen())
+	}
+	
+	p := tea.NewProgram(m, programOpts...)
 
 	sift := &sift{
 		model:   m,

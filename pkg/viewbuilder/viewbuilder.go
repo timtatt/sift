@@ -25,6 +25,17 @@ func (vb *ViewBuilder) AddLine() {
 	vb.view += "\n"
 }
 
+func (vb *ViewBuilder) AddLines(n int) {
+	if n < 0 {
+		return
+	}
+
+	vb.lines += n
+	for _ = range n {
+		vb.view += "\n"
+	}
+}
+
 func (vb *ViewBuilder) Lines() int {
 	return vb.lines
 }

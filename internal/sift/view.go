@@ -21,6 +21,13 @@ type testState struct {
 	viewportPos int
 }
 
+type viewMode int
+
+const (
+	viewModeAlternate viewMode = iota
+	viewModeInline
+)
+
 type siftModel struct {
 	opts SiftOptions
 
@@ -41,8 +48,9 @@ type siftModel struct {
 
 	windowSize tea.WindowSizeMsg
 
-	// search functionality
 	searchInput textinput.Model
+
+	mode viewMode
 }
 
 type cursor struct {
@@ -57,6 +65,11 @@ func NewSiftModel(opts SiftOptions) *siftModel {
 	ti.Prompt = "Search: /"
 	ti.CharLimit = 100
 
+	mode := viewModeAlternate
+	if opts.NonInteractive {
+		mode = viewModeInline
+	}
+
 	return &siftModel{
 		opts:        opts,
 		testManager: tests.NewTestManager(),
@@ -67,6 +80,7 @@ func NewSiftModel(opts SiftOptions) *siftModel {
 			log:  0,
 		},
 		searchInput: ti,
+		mode:        mode,
 	}
 }
 
@@ -275,6 +289,10 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.startTime = time.Now()
 	}
 
+	if m.mode == viewModeInline && !m.endTime.IsZero() {
+		return m, tea.Quit
+	}
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.windowSize = msg
@@ -290,10 +308,12 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.searchInput.Width = msg.Width
 		}
 	case tea.KeyMsg:
-		// capture the most recent keypress into the ring buffer
+		if m.mode == viewModeInline {
+			return m, nil
+		}
+
 		m.BufferKey(msg)
 
-		// Handle search mode
 		if m.searchInput.Focused() {
 			switch {
 			case key.Matches(msg, keys.Quit):
@@ -312,21 +332,15 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmds = append(cmds, inputCmd)
 				m.ensureCursorVisible()
 			}
-			// Don't process other keys when in search mode
 			return m, tea.Batch(cmds...)
 		}
 
-		// Check if we should enter search mode
 		if key.Matches(msg, keys.Search) {
 			m.searchInput.Focus()
 			m.searchInput.SetValue("")
 			return m, textinput.Blink
 		}
 
-		// TODO: rewrite how the cursor is managed
-		// 2. can we get the state to me managed more centrally
-
-		// Handle two-character key sequences using the ring buffer
 		switch {
 		case m.LastKeysMatch(keys.ToggleTestsRecursively):
 			// toggle recursively
@@ -394,7 +408,13 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.Help):
 			m.help.ShowAll = !m.help.ShowAll
 		case key.Matches(msg, keys.Quit):
-			return m, tea.Quit
+			if m.mode == viewModeAlternate {
+				m.mode = viewModeInline
+				return m, tea.ExitAltScreen
+			}
+			if !m.endTime.IsZero() {
+				return m, tea.Quit
+			}
 		case key.Matches(msg, keys.ClearSearch):
 			// Clear search filter when esc is pressed and not in search mode
 			if m.searchInput.Value() != "" {
@@ -432,13 +452,22 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	m.viewport, cmd = m.viewport.Update(msg)
-	cmds = append(cmds, cmd)
+	if m.mode == viewModeAlternate {
+		m.viewport, cmd = m.viewport.Update(msg)
+		cmds = append(cmds, cmd)
+	}
 
 	return m, tea.Batch(cmds...)
 }
 
 func (m *siftModel) View() string {
+	if m.mode == viewModeInline {
+		return m.inlineView()
+	}
+	return m.interactiveView()
+}
+
+func (m *siftModel) interactiveView() string {
 	s := ""
 
 	var header string
@@ -447,7 +476,6 @@ func (m *siftModel) View() string {
 		header += fmt.Sprintf(" cursor: [%d, %d] %d | yoffset: %d, bottom %d", m.cursor.test, m.cursor.log, m.GetCursorPos(), m.viewport.YOffset, m.viewport.YOffset+m.viewport.Height)
 
 	}
-	// Display search input when in search mode
 	if m.searchInput.Focused() {
 		header += "\n\n" + m.searchInput.View()
 	} else if m.searchInput.Value() != "" {
@@ -528,7 +556,61 @@ func getIndentWithLines(indentLevel int) string {
 	return indent.String()
 }
 
-// TODO: don't like how summary is being handled
+func (m *siftModel) inlineView() string {
+	if !m.started {
+		return styleSecondary.Render("Waiting for test results...")
+	}
+
+	vb := viewbuilder.New()
+	summary := tests.NewSummary()
+
+	for _, test := range m.testManager.GetTests {
+		summary.AddPackage(test.Ref.Package, test.Status)
+
+		var statusIcon string
+		switch test.Status {
+		case "skip":
+			statusIcon = styleSkip.Render("\u23ED")
+		case "run":
+			statusIcon = styleProgress.Render("\u2022")
+		case "fail":
+			statusIcon = styleCross.Render("\u00D7")
+		case "pass":
+			statusIcon = styleTick.Render("\u2713")
+		}
+
+		indentLevel := getIndentLevel(test.Ref.Test)
+		indent := strings.Repeat("  ", indentLevel)
+		testName := getDisplayName(test.Ref.Test)
+
+		elapsed := ""
+		if test.Status != "run" {
+			elapsed = styleSecondary.Render(
+				fmt.Sprintf(" (%.2fs)", test.Elapsed.Seconds()),
+			)
+		}
+
+		vb.Add(fmt.Sprintf("%s%s %s%s", indent, statusIcon, testName, elapsed))
+		vb.AddLine()
+	}
+
+	vb.AddLine()
+	vb.Add(m.summaryView(summary))
+
+	if !m.endTime.IsZero() {
+		vb.AddLines(2)
+		total := summary.Total()
+		if total.Failed > 0 {
+			vb.Add(styleOutcomeFail.Render("FAILED"))
+		} else {
+			vb.Add(styleOutcomePass.Render("PASSED"))
+		}
+		vb.AddLine()
+	}
+
+	return vb.String()
+}
+
 func (m *siftModel) testView() (string, *tests.Summary) {
 	vb := viewbuilder.New()
 
