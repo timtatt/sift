@@ -148,7 +148,6 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 				vb.Add(indent + prefix + log)
 				vb.AddLine()
 			}
-			vb.AddLine()
 		}
 	}
 
