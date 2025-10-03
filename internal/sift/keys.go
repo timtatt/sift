@@ -24,6 +24,7 @@ type keyMap struct {
 	ClearSearch            key.Binding
 	Help                   key.Binding
 	Quit                   key.Binding
+	ToggleMode             key.Binding
 }
 
 func (k keyMap) ShortHelp() []key.Binding {
@@ -61,6 +62,10 @@ var (
 				key.WithHelp("ctrl+d", "half page down"),
 			),
 		},
+		ToggleMode: key.NewBinding(
+			key.WithKeys("m"),
+			key.WithHelp("m", "toggle mode"),
+		),
 		Up: key.NewBinding(
 			key.WithKeys("up", "k"),
 			key.WithHelp("↑/k", "move up"),

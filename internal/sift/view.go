@@ -33,6 +33,8 @@ type siftModel struct {
 
 	cursor *cursor
 
+	autoToggleMode bool
+
 	startTime time.Time
 	endTime   time.Time
 
@@ -128,60 +130,119 @@ func (m *siftModel) ensureCursorVisible() {
 }
 
 func (m *siftModel) PrevTest() {
-	if m.cursor.test > 0 {
-		// Find the previous visible test
-		for i := m.cursor.test - 1; i >= 0; i-- {
-			if m.isTestVisible(i) {
-				m.cursor.test = i
-				m.cursor.log = 0
-				return
-			}
+	if m.cursor.test <= 0 {
+		return
+	}
+
+	// Find the previous visible test
+	for i := m.cursor.test - 1; i >= 0; i-- {
+		if !m.isTestVisible(i) {
+			continue
 		}
+
+		if m.autoToggleMode {
+			// close the current test if it's open
+			m.ToggleTest(m.cursor.test, false)
+
+			// open the next text
+			m.ToggleTest(i, true)
+		}
+
+		m.cursor.test = i
+		m.cursor.log = 0
+		return
+	}
+}
+
+func (m *siftModel) ToggleTest(index int, toggled bool) {
+	test := m.testManager.GetTest(index)
+	if test != nil {
+		m.testState[test.Ref].toggled = toggled
 	}
 }
 
 func (m *siftModel) NextTest() {
-	if m.cursor.test < m.testManager.GetTestCount()-1 {
-		// Find the next visible test
-		for i := m.cursor.test + 1; i < m.testManager.GetTestCount(); i++ {
-			if m.isTestVisible(i) {
-				m.cursor.test = i
-				m.cursor.log = 0
-				return
-			}
+	if m.cursor.test >= m.testManager.GetTestCount() {
+		return
+	}
+
+	// Find the next visible test
+	for i := m.cursor.test + 1; i < m.testManager.GetTestCount(); i++ {
+		if !m.isTestVisible(i) {
+			continue
 		}
+
+		if m.autoToggleMode {
+			// close the current test if it's open
+			m.ToggleTest(m.cursor.test, false)
+
+			// open the next text
+			m.ToggleTest(i, true)
+		}
+
+		m.cursor.test = i
+		m.cursor.log = 0
+		return
 	}
 }
 
 func (m *siftModel) PrevFailingTest() {
-	if m.cursor.test > 0 {
-		// Find the previous visible failing test
-		for i := m.cursor.test - 1; i >= 0; i-- {
-			if m.isTestVisible(i) {
-				test := m.testManager.GetTest(i)
-				if test != nil && test.Status == "fail" {
-					m.cursor.test = i
-					m.cursor.log = 0
-					return
-				}
-			}
+	if m.cursor.test <= 0 {
+		return
+	}
+
+	// Find the previous visible failing test
+	for i := m.cursor.test - 1; i >= 0; i-- {
+		if !m.isTestVisible(i) {
+			continue
 		}
+
+		test := m.testManager.GetTest(i)
+		if test != nil && test.Status != "fail" {
+			continue
+		}
+
+		if m.autoToggleMode {
+			// close the current test if it's open
+			m.ToggleTest(m.cursor.test, false)
+
+			// open the next text
+			m.ToggleTest(i, true)
+		}
+
+		m.cursor.test = i
+		m.cursor.log = 0
+		return
 	}
 }
 
 func (m *siftModel) NextFailingTest() {
-	if m.cursor.test < m.testManager.GetTestCount()-1 {
-		// Find the next visible failing test
-		for i := m.cursor.test + 1; i < m.testManager.GetTestCount(); i++ {
-			if m.isTestVisible(i) {
-				test := m.testManager.GetTest(i)
-				if test != nil && test.Status == "fail" {
-					m.cursor.test = i
-					m.cursor.log = 0
-					return
-				}
-			}
+	if m.cursor.test >= m.testManager.GetTestCount() {
+		return
+	}
+
+	// Find the next visible failing test
+	for i := m.cursor.test + 1; i < m.testManager.GetTestCount(); i++ {
+		if !m.isTestVisible(i) {
+			continue
 		}
+
+		test := m.testManager.GetTest(i)
+		if test != nil && test.Status != "fail" {
+			continue
+		}
+
+		if m.autoToggleMode {
+			// close the current test if it's open
+			m.ToggleTest(m.cursor.test, false)
+
+			// open the next text
+			m.ToggleTest(i, true)
+		}
+
+		m.cursor.test = i
+		m.cursor.log = 0
+		return
 	}
 }
 
@@ -208,11 +269,21 @@ func (m *siftModel) CursorDown() {
 
 	// go to the next visible test
 	for i := m.cursor.test + 1; i < m.testManager.GetTestCount(); i++ {
-		if m.isTestVisible(i) {
-			m.cursor.test = i
-			m.cursor.log = 0
-			return
+		if !m.isTestVisible(i) {
+			continue
 		}
+
+		if m.autoToggleMode {
+			// close the current test if it's open
+			m.ToggleTest(m.cursor.test, false)
+
+			// open the next text
+			m.ToggleTest(i, true)
+		}
+
+		m.cursor.test = i
+		m.cursor.log = 0
+		return
 	}
 }
 
@@ -252,19 +323,29 @@ func (m *siftModel) CursorUp() {
 
 	// go to the previous visible test
 	for i := m.cursor.test - 1; i >= 0; i-- {
-		if m.isTestVisible(i) {
-			m.cursor.test = i
-
-			test := m.testManager.GetTest(m.cursor.test)
-			if state := m.testState[test.Ref]; state.toggled {
-				// set the log to the last log in previous test
-				logCount := m.testManager.GetLogCount(test.Ref)
-				m.cursor.log = logCount - 1
-			} else {
-				m.cursor.log = 0
-			}
-			return
+		if !m.isTestVisible(i) {
+			continue
 		}
+
+		if m.autoToggleMode {
+			// close the current test
+			m.ToggleTest(m.cursor.test, false)
+
+			// open the next text
+			m.ToggleTest(i, true)
+		}
+
+		m.cursor.test = i
+
+		test := m.testManager.GetTest(m.cursor.test)
+		if state := m.testState[test.Ref]; state.toggled {
+			// set the log to the last log in previous test
+			logCount := m.testManager.GetLogCount(test.Ref)
+			m.cursor.log = logCount - 1
+		} else {
+			m.cursor.log = 0
+		}
+		return
 	}
 }
 
@@ -417,6 +498,18 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch {
+		case key.Matches(msg, keys.ToggleMode):
+			m.autoToggleMode = !m.autoToggleMode
+
+			if m.autoToggleMode {
+				// close all tests except the current one
+				for i, test := range m.testManager.GetTests {
+					if i != m.cursor.test {
+						m.testState[test.Ref].toggled = false
+					}
+				}
+			}
+
 		case key.Matches(msg, keys.PrevTest):
 			m.PrevTest()
 

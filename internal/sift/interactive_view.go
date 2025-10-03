@@ -15,6 +15,11 @@ func (m *siftModel) interactiveView() string {
 
 	var header string
 	header += styleHeader.Render("\u2207 sift")
+
+	if m.autoToggleMode {
+		header += styleSecondary.Render(" [AUTO TOGGLE MODE]")
+	}
+
 	if m.opts.Debug {
 		header += fmt.Sprintf(" cursor: [%d, %d] %d | yoffset: %d, bottom %d", m.cursor.test, m.cursor.log, m.GetCursorPos(), m.viewport.YOffset, m.viewport.YOffset+m.viewport.Height)
 
