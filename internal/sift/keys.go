@@ -11,6 +11,8 @@ type keyMap struct {
 	Down                   key.Binding
 	PrevTest               key.Binding
 	NextTest               key.Binding
+	PrevFailingTest        key.Binding
+	NextFailingTest        key.Binding
 	ToggleTestsRecursively key.Binding
 	ExpandAllTests         key.Binding
 	CollapseAllTests       key.Binding
@@ -31,6 +33,7 @@ func (k keyMap) ShortHelp() []key.Binding {
 func (k keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.PrevTest, k.NextTest},
+		{k.PrevFailingTest, k.NextFailingTest},
 		{k.viewport.Up, k.viewport.Down, k.viewport.HalfPageUp, k.viewport.HalfPageDown},
 		{k.ToggleTest, k.ToggleTestAlt, k.ExpandTest, k.CollapseTest},
 		{k.ToggleTestsRecursively, k.ExpandAllTests, k.CollapseAllTests},
@@ -73,6 +76,14 @@ var (
 		NextTest: key.NewBinding(
 			key.WithKeys("}"),
 			key.WithHelp("}", "next test"),
+		),
+		PrevFailingTest: key.NewBinding(
+			key.WithKeys("["),
+			key.WithHelp("[", "previous failing test"),
+		),
+		NextFailingTest: key.NewBinding(
+			key.WithKeys("]"),
+			key.WithHelp("]", "next failing test"),
 		),
 		ToggleTestsRecursively: key.NewBinding(
 			key.WithKeys("zA"),

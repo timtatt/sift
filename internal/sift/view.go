@@ -153,6 +153,38 @@ func (m *siftModel) NextTest() {
 	}
 }
 
+func (m *siftModel) PrevFailingTest() {
+	if m.cursor.test > 0 {
+		// Find the previous visible failing test
+		for i := m.cursor.test - 1; i >= 0; i-- {
+			if m.isTestVisible(i) {
+				test := m.testManager.GetTest(i)
+				if test != nil && test.Status == "fail" {
+					m.cursor.test = i
+					m.cursor.log = 0
+					return
+				}
+			}
+		}
+	}
+}
+
+func (m *siftModel) NextFailingTest() {
+	if m.cursor.test < m.testManager.GetTestCount()-1 {
+		// Find the next visible failing test
+		for i := m.cursor.test + 1; i < m.testManager.GetTestCount(); i++ {
+			if m.isTestVisible(i) {
+				test := m.testManager.GetTest(i)
+				if test != nil && test.Status == "fail" {
+					m.cursor.test = i
+					m.cursor.log = 0
+					return
+				}
+			}
+		}
+	}
+}
+
 func (m *siftModel) CursorDown() {
 	test := m.testManager.GetTest(m.cursor.test)
 
@@ -401,6 +433,22 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if cursorDelta > 0 {
 				m.viewport.ScrollDown(cursorDelta)
 			}
+		case key.Matches(msg, keys.PrevFailingTest):
+			m.PrevFailingTest()
+
+			// scroll up if selected line is within 'scrollBuffer' of the top
+			cursorDelta := m.viewport.YOffset - m.GetCursorPos() + scrollBuffer
+			if cursorDelta > 0 {
+				m.viewport.ScrollUp(cursorDelta)
+			}
+		case key.Matches(msg, keys.NextFailingTest):
+			m.NextFailingTest()
+
+			// scroll down if selected line is within 'scrollBuffer' of the bottom
+			cursorDelta := m.GetCursorPos() - m.viewport.YOffset - m.viewport.Height + scrollBuffer
+			if cursorDelta > 0 {
+				m.viewport.ScrollDown(cursorDelta)
+			}
 
 		case key.Matches(msg, keys.Help):
 			m.help.ShowAll = !m.help.ShowAll
@@ -463,4 +511,3 @@ func (m *siftModel) View() string {
 	}
 	return m.interactiveView()
 }
-
