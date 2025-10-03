@@ -33,12 +33,13 @@ func (k keyMap) ShortHelp() []key.Binding {
 
 func (k keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
-		{k.Up, k.Down, k.PrevTest, k.NextTest},
-		{k.PrevFailingTest, k.NextFailingTest},
+		{k.Up, k.Down},
+		{k.PrevTest, k.NextTest, k.PrevFailingTest, k.NextFailingTest},
 		{k.viewport.Up, k.viewport.Down, k.viewport.HalfPageUp, k.viewport.HalfPageDown},
-		{k.ToggleTest, k.ToggleTestAlt, k.ExpandTest, k.CollapseTest},
+		{k.ToggleTest, k.ExpandTest, k.CollapseTest},
 		{k.ToggleTestsRecursively, k.ExpandAllTests, k.CollapseAllTests},
 		{k.Search, k.ClearSearch, k.Help, k.Quit},
+		{k.ToggleMode},
 	}
 }
 
