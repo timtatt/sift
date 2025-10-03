@@ -1,8 +1,10 @@
-# sift - _A lightweight terminal UI for displaying Go tests._
+# sift
+
+> _A lightweight terminal UI for displaying Go tests._
+
+sift is a lightweight terminal UI for displaying Go test results. It allows developers to traverse verbose Go test logs in their terminal. Each test is able to be expanded and collapsed to only show the logs that matter.
 
 <img src="/assets/screenshot.png" width="60%" alt="Screenshot of the Sift UI">
-
-Sift solves the problem of verbose Go test logs by allowing you to show/hide the logs at an individual tests level.
 
 ## Installation
 
