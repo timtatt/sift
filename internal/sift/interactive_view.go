@@ -140,16 +140,22 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 
 			for logIdx, log := range logs {
 
+				logStyle := lipgloss.NewStyle()
 				prefix := "  "
-				// handle raw logs optimisation
-				styledLog := prettifyLogEntry(log, lipgloss.NewStyle())
 				if testHighlighted && logIdx == m.cursor.log {
 					prefix = "> "
-					logStyle := lipgloss.NewStyle().Bold(true)
-					styledLog = prettifyLogEntry(log, logStyle)
+					logStyle = lipgloss.NewStyle().Bold(true)
 				} else if !testHighlighted {
-					styledLog = prettifyLogEntry(log, styleSecondary)
+					logStyle = styleSecondary
 				}
+
+				var styledLog string
+				if m.opts.PrettifyLogs {
+					styledLog = prettifyLogEntry(log, logStyle)
+				} else {
+					styledLog = logStyle.Render(log.Message)
+				}
+
 				styledLog = styleLog.Width(m.viewport.Width - 2).Render(styledLog)
 
 				vb.Add(indent + prefix + styledLog)

@@ -15,10 +15,17 @@ type TestManager struct {
 
 	testLogs    map[TestReference][]logparse.LogEntry
 	testLogLock sync.RWMutex
+
+	opts TestManagerOpts
 }
 
-func NewTestManager() *TestManager {
+type TestManagerOpts struct {
+	ParseLogs bool
+}
+
+func NewTestManager(opts TestManagerOpts) *TestManager {
 	return &TestManager{
+		opts:     opts,
 		tests:    make([]*TestNode, 0),
 		testLogs: make(map[TestReference][]logparse.LogEntry),
 	}
@@ -64,7 +71,14 @@ func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
 	case "output":
 		log := strings.TrimRight(testOutput.Output, "\n")
 
-		logEntry := logparse.ParseLog(log)
+		var logEntry logparse.LogEntry
+		if tm.opts.ParseLogs {
+			logEntry = logparse.ParseLog(log)
+		} else {
+			logEntry = logparse.LogEntry{
+				Message: log,
+			}
+		}
 
 		if shouldSkipLogLine(log) {
 			return
