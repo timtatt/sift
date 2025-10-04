@@ -430,7 +430,7 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if m.searchInput.Focused() {
 			switch {
-			case key.Matches(msg, keys.Quit):
+			case msg.String() == "esc":
 				// Exit search mode and clear query
 				m.searchInput.Blur()
 				m.searchInput.SetValue("")
@@ -439,6 +439,10 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Exit search mode but keep the filter
 				m.searchInput.Blur()
 				m.ensureCursorVisible()
+			case msg.String() == "ctrl+p":
+				m.PrevTest()
+			case msg.String() == "ctrl+n":
+				m.NextTest()
 			default:
 				// Update the textinput with the key
 				var inputCmd tea.Cmd

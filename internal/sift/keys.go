@@ -67,11 +67,11 @@ var (
 			key.WithHelp("m", "change mode"),
 		),
 		Up: key.NewBinding(
-			key.WithKeys("up", "k"),
+			key.WithKeys("up", "k", "ctrl+p"),
 			key.WithHelp("↑/k", "move up"),
 		),
 		Down: key.NewBinding(
-			key.WithKeys("down", "j"),
+			key.WithKeys("down", "j", "ctrl+n"),
 			key.WithHelp("↓/j", "move down"),
 		),
 		PrevTest: key.NewBinding(
