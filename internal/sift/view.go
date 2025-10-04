@@ -4,13 +4,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lithammer/fuzzysearch/fuzzy"
 	"github.com/timtatt/sift/internal/tests"
+	"github.com/timtatt/sift/pkg/helpview"
 )
 
 type testState struct {
@@ -43,7 +43,7 @@ type siftModel struct {
 	viewport  viewport.Model
 	keyBuffer []string
 
-	help help.Model
+	help *helpview.WrappingHelpView
 
 	windowSize tea.WindowSizeMsg
 
@@ -411,6 +411,7 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.windowSize = msg
 		if !m.ready {
 			m.help.Width = msg.Width
+			m.help.ColumnWidth = 24
 			m.viewport = viewport.New(msg.Width, msg.Height)
 			m.viewport.KeyMap = keys.viewport
 			m.searchInput.Width = msg.Width
