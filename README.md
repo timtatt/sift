@@ -9,7 +9,19 @@ sift is a lightweight terminal UI for displaying Go test results. It allows deve
 ## Installation
 
 ```bash
-go install github.com/timtatt/sift@v0.5.0
+go install github.com/timtatt/sift@v0.7.0
+```
+
+## Try it out!
+
+You can try a demo of sift with the sample tests provide
+
+```bash
+# Clone the repo
+git clone github.com/timtatt/sift.git
+
+# Run sift
+go test ./samples/... -v -json | sift
 ```
 
 ## Usage
@@ -27,7 +39,8 @@ go test ./... -v -json | sift
 
 | Flag                | Shorthand | Description                                     |
 | ------------------- | --------- | ----------------------------------------------- |
-| `--debug`           |           | Enable debug view                               |
+| `--debug`           | `-d`      | Enable debug view                               |
+| `--raw`             | `-r`      | Disable prettified logs                         |
 | `--non-interactive` | `-n`      | Skip alternate screen and show inline view only |
 
 **Example:**
@@ -38,6 +51,9 @@ go test ./... -v -json | sift -n
 
 # Enable debug view
 go test ./... -v -json | sift --debug
+
+# Disable log prettification
+go test ./... -v -json | sift --raw
 ```
 
 ### Keymaps
@@ -46,12 +62,14 @@ The keymaps are based on vim motion standard keymaps for scrolling and managing 
 
 #### Navigation
 
-| Key       | Action                |
-| --------- | --------------------- |
-| `↑` / `k` | Move up               |
-| `↓` / `j` | Move down             |
-| `{`       | Jump to previous test |
-| `}`       | Jump to next test     |
+| Key       | Action                       |
+| --------- | ---------------------------- |
+| `↑` / `k` | Move up                      |
+| `↓` / `j` | Move down                    |
+| `{`       | Jump to previous test        |
+| `}`       | Jump to next test            |
+| `[`       | Jump to previous failed test |
+| `]`       | Jump to next failed test     |
 
 #### Viewport Scrolling
 
@@ -92,6 +110,7 @@ The keymaps are based on vim motion standard keymaps for scrolling and managing 
 | Key            | Action           |
 | -------------- | ---------------- |
 | `?`            | Toggle help menu |
+| `m`            | Change mode      |
 | `q` / `ctrl+c` | Quit             |
 
 ## Feature Roadmap
