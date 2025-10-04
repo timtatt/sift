@@ -5,20 +5,29 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/timtatt/sift/pkg/logparse"
 )
 
 type TestManager struct {
 	tests    []*TestNode
 	testLock sync.RWMutex
 
-	testLogs    map[TestReference][]string
+	testLogs    map[TestReference][]logparse.LogEntry
 	testLogLock sync.RWMutex
+
+	opts TestManagerOpts
 }
 
-func NewTestManager() *TestManager {
+type TestManagerOpts struct {
+	ParseLogs bool
+}
+
+func NewTestManager(opts TestManagerOpts) *TestManager {
 	return &TestManager{
+		opts:     opts,
 		tests:    make([]*TestNode, 0),
-		testLogs: make(map[TestReference][]string),
+		testLogs: make(map[TestReference][]logparse.LogEntry),
 	}
 }
 
@@ -62,6 +71,20 @@ func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
 	case "output":
 		log := strings.TrimRight(testOutput.Output, "\n")
 
+		var logEntry logparse.LogEntry
+		if tm.opts.ParseLogs {
+			logEntry = logparse.ParseLog(log)
+		} else {
+			logEntry = logparse.LogEntry{
+				Message: log,
+			}
+		}
+
+		// provide a time if one isn't present in the log entry
+		if logEntry.Time.IsZero() {
+			logEntry.Time = testOutput.Time
+		}
+
 		if shouldSkipLogLine(log) {
 			return
 		}
@@ -72,9 +95,9 @@ func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
 		_, ok := tm.testLogs[testRef]
 
 		if ok {
-			tm.testLogs[testRef] = append(tm.testLogs[testRef], log)
+			tm.testLogs[testRef] = append(tm.testLogs[testRef], logEntry)
 		} else {
-			tm.testLogs[testRef] = []string{log}
+			tm.testLogs[testRef] = []logparse.LogEntry{logEntry}
 		}
 
 	case "run":
@@ -142,7 +165,7 @@ func (tm *TestManager) GetLogCount(testRef TestReference) int {
 	return 0
 }
 
-func (tm *TestManager) GetLogs(testRef TestReference) []string {
+func (tm *TestManager) GetLogs(testRef TestReference) []logparse.LogEntry {
 	tm.testLogLock.RLock()
 	defer tm.testLogLock.RUnlock()
 

@@ -97,7 +97,7 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 			continue
 		}
 
-		highlighted := m.cursor.test == i
+		testHighlighted := m.cursor.test == i
 
 		var statusIcon string
 		summary.AddPackage(test.Ref.Package, test.Status)
@@ -116,7 +116,7 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 		indent := getIndentWithLines(indentLevel)
 		testName := getDisplayName(test.Ref.Test)
 
-		if highlighted {
+		if testHighlighted {
 			testName = styleHighlighted.Render(testName)
 		}
 
@@ -140,17 +140,25 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 
 			for logIdx, log := range logs {
 
+				logStyle := lipgloss.NewStyle()
 				prefix := "  "
-				if highlighted && logIdx == m.cursor.log {
+				if testHighlighted && logIdx == m.cursor.log {
 					prefix = "> "
-					log = lipgloss.NewStyle().Bold(true).Render(log)
-				} else if !highlighted {
-					log = styleSecondary.Render(log)
+					logStyle = lipgloss.NewStyle().Bold(true)
+				} else if !testHighlighted {
+					logStyle = styleSecondary
 				}
 
-				log = styleLog.Width(m.viewport.Width - 2).Render(log)
+				var styledLog string
+				if m.opts.PrettifyLogs {
+					styledLog = prettifyLogEntry(log, logStyle)
+				} else {
+					styledLog = logStyle.Render(log.Message)
+				}
 
-				vb.Add(indent + prefix + log)
+				styledLog = styleLog.Width(m.viewport.Width - 2).Render(styledLog)
+
+				vb.Add(indent + prefix + styledLog)
 				vb.AddLine()
 			}
 		}

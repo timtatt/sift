@@ -102,8 +102,8 @@ The keymaps are based on vim motion standard keymaps for scrolling and managing 
 
 ## Bug Fixes
 
-- [ ] Add responsive wrapping for the help
 - [ ] When items collapsed and viewport is too large, rerender to remove whitespace
+- [ ] Handling invalid inputs provided
 
 ## Credits
 
