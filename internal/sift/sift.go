@@ -11,6 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/timtatt/sift/internal/tests"
+	"github.com/timtatt/sift/pkg/prettylogs"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -29,6 +30,10 @@ func (s *sift) ScanStdin() error {
 		if err != nil {
 			// TODO: write to a temp dir log
 			return errors.New("unable to parse json input. ensure to use the `-json` flag when running go tests")
+		}
+
+		if s.model.opts.PrettifyLogs && line.Output != "" {
+			line.Output = prettylogs.PrettifyLog(line.Output)
 		}
 
 		s.model.testManager.AddTestOutput(line)
@@ -63,6 +68,7 @@ func (s *sift) Frame(ctx context.Context, tps int) {
 type SiftOptions struct {
 	Debug          bool
 	NonInteractive bool
+	PrettifyLogs   bool
 }
 
 func Run(ctx context.Context, opts SiftOptions) error {
@@ -75,16 +81,16 @@ func Run(ctx context.Context, opts SiftOptions) error {
 	g, ctx := errgroup.WithContext(ctx)
 
 	m := NewSiftModel(opts)
-	
+
 	programOpts := []tea.ProgramOption{
 		tea.WithFPS(fps),
 		tea.WithContext(ctx),
 	}
-	
+
 	if !opts.NonInteractive {
 		programOpts = append(programOpts, tea.WithAltScreen())
 	}
-	
+
 	p := tea.NewProgram(m, programOpts...)
 
 	sift := &sift{

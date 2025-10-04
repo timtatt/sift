@@ -79,7 +79,7 @@ func prettifySlogJSON(reader io.Reader) (string, error) {
 }
 
 func prettifySlogEntry(entry slogparse.SlogEntry) (string, error) {
-	timeFormatted := entry.Time.Format(time.TimeOnly)
+	timeFormatted := entry.Time.Format(time.TimeOnly + ".000")
 
 	additionalFields := ""
 	for key, value := range entry.Additional {
