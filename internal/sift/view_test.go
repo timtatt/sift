@@ -5,6 +5,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/stretchr/testify/assert"
 	"github.com/timtatt/sift/internal/tests"
 )
 
@@ -49,9 +50,7 @@ func TestGetIndentLevel(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := getIndentLevel(tt.testName)
-			if got != tt.want {
-				t.Errorf("getIndentLevel(%q) = %d, want %d", tt.testName, got, tt.want)
-			}
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -102,9 +101,7 @@ func TestGetDisplayName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := getDisplayName(tt.testName)
-			if got != tt.want {
-				t.Errorf("getDisplayName(%q) = %q, want %q", tt.testName, got, tt.want)
-			}
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -147,15 +144,11 @@ func TestGetIndentWithLines(t *testing.T) {
 			got := getIndentWithLines(tt.indentLevel)
 
 			if tt.wantEmpty {
-				if got != "" {
-					t.Errorf("getIndentWithLines(%d) = %q, want empty string", tt.indentLevel, got)
-				}
+				assert.Empty(t, got)
 				return
 			}
 
-			if len(got) == 0 {
-				t.Errorf("getIndentWithLines(%d) returned empty string, want non-empty", tt.indentLevel)
-			}
+			assert.NotEmpty(t, got)
 		})
 	}
 }
@@ -239,10 +232,7 @@ func TestLastKeysMatch(t *testing.T) {
 				keyBuffer: tt.keyBuffer,
 			}
 			got := m.LastKeysMatch(tt.binding)
-			if got != tt.want {
-				t.Errorf("LastKeysMatch() with buffer %v and binding keys %v = %v, want %v",
-					tt.keyBuffer, tt.binding.Keys(), got, tt.want)
-			}
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -294,15 +284,10 @@ func TestBufferKey(t *testing.T) {
 
 			m.BufferKey(msg)
 
-			if len(m.keyBuffer) != len(tt.expectedBuffer) {
-				t.Errorf("Buffer length = %d, want %d", len(m.keyBuffer), len(tt.expectedBuffer))
-				return
-			}
+			assert.Equal(t, len(tt.expectedBuffer), len(m.keyBuffer))
 
 			for i := range m.keyBuffer {
-				if m.keyBuffer[i] != tt.expectedBuffer[i] {
-					t.Errorf("Buffer[%d] = %q, want %q", i, m.keyBuffer[i], tt.expectedBuffer[i])
-				}
+				assert.Equal(t, tt.expectedBuffer[i], m.keyBuffer[i])
 			}
 		})
 	}
@@ -330,10 +315,7 @@ func TestBufferKeySequence(t *testing.T) {
 		m.BufferKey(msg)
 
 		for i := range m.keyBuffer {
-			if m.keyBuffer[i] != k.expected[i] {
-				t.Errorf("After adding %q, buffer[%d] = %q, want %q",
-					k.key, i, m.keyBuffer[i], k.expected[i])
-			}
+			assert.Equal(t, k.expected[i], m.keyBuffer[i])
 		}
 	}
 }
@@ -345,24 +327,16 @@ func TestBufferKeyAndLastKeysMatchIntegration(t *testing.T) {
 
 	binding := key.NewBinding(key.WithKeys("zA"))
 
-	if m.LastKeysMatch(binding) {
-		t.Error("Should not match with empty buffer")
-	}
+	assert.False(t, m.LastKeysMatch(binding), "Should not match with empty buffer")
 
 	m.BufferKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("z")})
-	if m.LastKeysMatch(binding) {
-		t.Error("Should not match with only 'z' in buffer")
-	}
+	assert.False(t, m.LastKeysMatch(binding), "Should not match with only 'z' in buffer")
 
 	m.BufferKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("A")})
-	if !m.LastKeysMatch(binding) {
-		t.Error("Should match with 'zA' in buffer")
-	}
+	assert.True(t, m.LastKeysMatch(binding), "Should match with 'zA' in buffer")
 
 	m.BufferKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
-	if m.LastKeysMatch(binding) {
-		t.Error("Should not match after buffer shifted")
-	}
+	assert.False(t, m.LastKeysMatch(binding), "Should not match after buffer shifted")
 }
 
 func TestNextTest(t *testing.T) {
@@ -427,12 +401,8 @@ func TestNextTest(t *testing.T) {
 
 			m.NextTest()
 
-			if m.cursor.test != tt.expectedCursor {
-				t.Errorf("cursor.test = %d, want %d", m.cursor.test, tt.expectedCursor)
-			}
-			if m.cursor.log != tt.expectedLog {
-				t.Errorf("cursor.log = %d, want %d", m.cursor.log, tt.expectedLog)
-			}
+			assert.Equal(t, tt.expectedCursor, m.cursor.test)
+			assert.Equal(t, tt.expectedLog, m.cursor.log)
 		})
 	}
 }
@@ -498,12 +468,8 @@ func TestPrevTest(t *testing.T) {
 
 			m.PrevTest()
 
-			if m.cursor.test != tt.expectedCursor {
-				t.Errorf("cursor.test = %d, want %d", m.cursor.test, tt.expectedCursor)
-			}
-			if m.cursor.log != tt.expectedLog {
-				t.Errorf("cursor.log = %d, want %d", m.cursor.log, tt.expectedLog)
-			}
+			assert.Equal(t, tt.expectedCursor, m.cursor.test)
+			assert.Equal(t, tt.expectedLog, m.cursor.log)
 		})
 	}
 }
@@ -594,12 +560,8 @@ func TestCursorDown(t *testing.T) {
 
 			m.CursorDown()
 
-			if m.cursor.test != tt.expectedTestIdx {
-				t.Errorf("cursor.test = %d, want %d", m.cursor.test, tt.expectedTestIdx)
-			}
-			if m.cursor.log != tt.expectedLogIdx {
-				t.Errorf("cursor.log = %d, want %d", m.cursor.log, tt.expectedLogIdx)
-			}
+			assert.Equal(t, tt.expectedTestIdx, m.cursor.test)
+			assert.Equal(t, tt.expectedLogIdx, m.cursor.log)
 		})
 	}
 }
@@ -682,12 +644,8 @@ func TestCursorUp(t *testing.T) {
 
 			m.CursorUp()
 
-			if m.cursor.test != tt.expectedTestIdx {
-				t.Errorf("cursor.test = %d, want %d", m.cursor.test, tt.expectedTestIdx)
-			}
-			if m.cursor.log != tt.expectedLogIdx {
-				t.Errorf("cursor.log = %d, want %d", m.cursor.log, tt.expectedLogIdx)
-			}
+			assert.Equal(t, tt.expectedTestIdx, m.cursor.test)
+			assert.Equal(t, tt.expectedLogIdx, m.cursor.log)
 		})
 	}
 }
@@ -753,12 +711,8 @@ func TestNextFailingTest(t *testing.T) {
 
 			m.NextFailingTest()
 
-			if m.cursor.test != tt.expectedCursor {
-				t.Errorf("cursor.test = %d, want %d", m.cursor.test, tt.expectedCursor)
-			}
-			if m.cursor.log != tt.expectedLog {
-				t.Errorf("cursor.log = %d, want %d", m.cursor.log, tt.expectedLog)
-			}
+			assert.Equal(t, tt.expectedCursor, m.cursor.test)
+			assert.Equal(t, tt.expectedLog, m.cursor.log)
 		})
 	}
 }
@@ -832,12 +786,8 @@ func TestPrevFailingTest(t *testing.T) {
 
 			m.PrevFailingTest()
 
-			if m.cursor.test != tt.expectedCursor {
-				t.Errorf("cursor.test = %d, want %d", m.cursor.test, tt.expectedCursor)
-			}
-			if m.cursor.log != tt.expectedLog {
-				t.Errorf("cursor.log = %d, want %d", m.cursor.log, tt.expectedLog)
-			}
+			assert.Equal(t, tt.expectedCursor, m.cursor.test)
+			assert.Equal(t, tt.expectedLog, m.cursor.log)
 		})
 	}
 }
