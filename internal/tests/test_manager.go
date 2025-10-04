@@ -5,20 +5,22 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/timtatt/sift/pkg/logparse"
 )
 
 type TestManager struct {
 	tests    []*TestNode
 	testLock sync.RWMutex
 
-	testLogs    map[TestReference][]string
+	testLogs    map[TestReference][]logparse.LogEntry
 	testLogLock sync.RWMutex
 }
 
 func NewTestManager() *TestManager {
 	return &TestManager{
 		tests:    make([]*TestNode, 0),
-		testLogs: make(map[TestReference][]string),
+		testLogs: make(map[TestReference][]logparse.LogEntry),
 	}
 }
 
@@ -62,6 +64,8 @@ func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
 	case "output":
 		log := strings.TrimRight(testOutput.Output, "\n")
 
+		logEntry := logparse.ParseLog(log)
+
 		if shouldSkipLogLine(log) {
 			return
 		}
@@ -72,9 +76,9 @@ func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
 		_, ok := tm.testLogs[testRef]
 
 		if ok {
-			tm.testLogs[testRef] = append(tm.testLogs[testRef], log)
+			tm.testLogs[testRef] = append(tm.testLogs[testRef], logEntry)
 		} else {
-			tm.testLogs[testRef] = []string{log}
+			tm.testLogs[testRef] = []logparse.LogEntry{logEntry}
 		}
 
 	case "run":
@@ -142,7 +146,7 @@ func (tm *TestManager) GetLogCount(testRef TestReference) int {
 	return 0
 }
 
-func (tm *TestManager) GetLogs(testRef TestReference) []string {
+func (tm *TestManager) GetLogs(testRef TestReference) []logparse.LogEntry {
 	tm.testLogLock.RLock()
 	defer tm.testLogLock.RUnlock()
 

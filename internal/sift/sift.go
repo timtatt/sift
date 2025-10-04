@@ -11,7 +11,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/timtatt/sift/internal/tests"
-	"github.com/timtatt/sift/pkg/prettylogs"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -30,10 +29,6 @@ func (s *sift) ScanStdin() error {
 		if err != nil {
 			// TODO: write to a temp dir log
 			return errors.New("unable to parse json input. ensure to use the `-json` flag when running go tests")
-		}
-
-		if s.model.opts.PrettifyLogs && line.Output != "" {
-			line.Output = prettylogs.PrettifyLog(line.Output)
 		}
 
 		s.model.testManager.AddTestOutput(line)

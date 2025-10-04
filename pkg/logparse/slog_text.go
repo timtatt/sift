@@ -1,4 +1,4 @@
-package slogparse
+package logparse
 
 import (
 	"fmt"
@@ -8,15 +8,15 @@ import (
 	"time"
 )
 
-func ParseText(reader io.Reader) (SlogEntry, error) {
+func ParseSlogText(reader io.Reader) (LogEntry, error) {
 
 	items, err := scan(reader)
 
 	if err != nil {
-		return SlogEntry{}, fmt.Errorf("unable to parse as slog text %s", err)
+		return LogEntry{}, fmt.Errorf("unable to parse as slog text %s", err)
 	}
 
-	entry := SlogEntry{
+	entry := LogEntry{
 		Additional: make(map[string]any),
 	}
 

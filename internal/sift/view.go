@@ -70,10 +70,11 @@ func NewSiftModel(opts SiftOptions) *siftModel {
 	}
 
 	return &siftModel{
-		opts:        opts,
-		testManager: tests.NewTestManager(),
-		testState:   make(map[tests.TestReference]*testState),
-		help:        help.New(),
+		opts:           opts,
+		testManager:    tests.NewTestManager(),
+		testState:      make(map[tests.TestReference]*testState),
+		autoToggleMode: true,
+		help:           help.New(),
 		cursor: &cursor{
 			test: 0,
 			log:  0,

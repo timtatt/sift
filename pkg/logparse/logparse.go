@@ -1,11 +1,13 @@
-package slogparse
+package logparse
 
 import (
 	"encoding/json"
+	"io"
+	"strings"
 	"time"
 )
 
-type SlogEntry struct {
+type LogEntry struct {
 	Time       time.Time      `json:"time"`
 	Level      string         `json:"level"`
 	Message    string         `json:"msg"`
@@ -13,8 +15,8 @@ type SlogEntry struct {
 }
 
 // TODO: remove this once json/v2 is GA
-func (se *SlogEntry) UnmarshalJSON(data []byte) error {
-	type Alias SlogEntry
+func (se *LogEntry) UnmarshalJSON(data []byte) error {
+	type Alias LogEntry
 	aux := &struct {
 		*Alias
 	}{
@@ -38,4 +40,21 @@ func (se *SlogEntry) UnmarshalJSON(data []byte) error {
 	se.Additional = rawMap
 
 	return nil
+}
+
+func ParseLog(log string) LogEntry {
+
+	for _, parser := range []func(io.Reader) (LogEntry, error){
+		ParseDefaultLog,
+		ParseSlogJSON,
+		ParseSlogText,
+	} {
+		parsedLog, err := parser(strings.NewReader(log))
+
+		if err == nil {
+			return parsedLog
+		}
+	}
+
+	return LogEntry{Message: log}
 }
