@@ -14,7 +14,7 @@ go install github.com/timtatt/sift@v0.7.0
 
 ## Try it out!
 
-You can try a demo of sift with the sample tests provide
+You can try a demo of sift with the sample tests provided in the `samples` folder.
 
 ```bash
 # Clone the repo
