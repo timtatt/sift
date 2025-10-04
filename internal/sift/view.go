@@ -76,7 +76,7 @@ func NewSiftModel(opts SiftOptions) *siftModel {
 		}),
 		testState:      make(map[tests.TestReference]*testState),
 		autoToggleMode: true,
-		help:           help.New(),
+		help:           helpview.New(),
 		cursor: &cursor{
 			test: 0,
 			log:  0,
@@ -411,7 +411,7 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.windowSize = msg
 		if !m.ready {
 			m.help.Width = msg.Width
-			m.help.ColumnWidth = 24
+			m.help.ColumnWidth = 20
 			m.viewport = viewport.New(msg.Width, msg.Height)
 			m.viewport.KeyMap = keys.viewport
 			m.searchInput.Width = msg.Width
@@ -502,7 +502,7 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch {
-		case key.Matches(msg, keys.ToggleMode):
+		case key.Matches(msg, keys.ChangeMode):
 			m.autoToggleMode = !m.autoToggleMode
 
 			if m.autoToggleMode {

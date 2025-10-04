@@ -46,7 +46,6 @@ func (h WrappingHelpView) fullHelpViewWithWrap(groups [][]key.Binding) string {
 
 	// First pass: render all columns with fixed width and track heights
 	var columns []string
-	var columnHeights []int
 
 	for _, group := range groups {
 		if group == nil || !shouldRenderColumn(group) {
@@ -71,94 +70,24 @@ func (h WrappingHelpView) fullHelpViewWithWrap(groups [][]key.Binding) string {
 			h.Styles.FullDesc.Render(strings.Join(descriptions, "\n")),
 		)
 
-		// Pad column to fixed width
-		lines := strings.Split(col, "\n")
-		var paddedLines []string
-		for _, line := range lines {
-			paddedLine := lipgloss.NewStyle().Width(h.ColumnWidth).Render(line)
-			paddedLines = append(paddedLines, paddedLine)
-		}
-		
-		columns = append(columns, strings.Join(paddedLines, "\n"))
-		columnHeights = append(columnHeights, len(paddedLines))
+		col = lipgloss.NewStyle().Width(h.ColumnWidth).Render(col)
+
+		columns = append(columns, col)
 	}
 
 	// Second pass: arrange columns into rows with wrapping
+	maxCols := min((h.Width + sepWidth) / h.ColumnWidth)
+
 	var rows []string
-	var currentRow []string
-	var currentRowHeights []int
-	currentRowWidth := 0
+	for i := 0; i < len(columns); i += maxCols {
+		cols := columns[i:min(i+maxCols, len(columns))]
 
-	for i, col := range columns {
-		neededWidth := h.ColumnWidth
-		if len(currentRow) > 0 {
-			neededWidth += sepWidth
-		}
+		row := lipgloss.JoinHorizontal(lipgloss.Top, cols...)
 
-		// Check if adding this column would exceed width
-		if len(currentRow) > 0 && currentRowWidth+neededWidth > h.Width {
-			// Render current row and start new one
-			rows = append(rows, h.renderRow(currentRow, currentRowHeights, separator))
-			currentRow = []string{}
-			currentRowHeights = []int{}
-			currentRowWidth = 0
-		}
-
-		// Add column to current row
-		currentRow = append(currentRow, col)
-		currentRowHeights = append(currentRowHeights, columnHeights[i])
-		currentRowWidth += h.ColumnWidth
-		if len(currentRow) > 1 {
-			currentRowWidth += sepWidth
-		}
-	}
-
-	// Add final row
-	if len(currentRow) > 0 {
-		rows = append(rows, h.renderRow(currentRow, currentRowHeights, separator))
+		rows = append(rows, row)
 	}
 
 	return strings.Join(rows, "\n\n")
-}
-
-// renderRow renders a row of columns, padding shorter columns to match the tallest
-func (h WrappingHelpView) renderRow(columns []string, heights []int, separator string) string {
-	if len(columns) == 0 {
-		return ""
-	}
-	if len(columns) == 1 {
-		return columns[0]
-	}
-
-	// Find max height
-	maxHeight := 0
-	for _, height := range heights {
-		if height > maxHeight {
-			maxHeight = height
-		}
-	}
-
-	// Pad all columns to same height
-	paddedColumns := make([]string, len(columns))
-	for i, col := range columns {
-		lines := strings.Split(col, "\n")
-		// Pad with empty lines if needed
-		for len(lines) < maxHeight {
-			lines = append(lines, lipgloss.NewStyle().Width(h.ColumnWidth).Render(""))
-		}
-		paddedColumns[i] = strings.Join(lines, "\n")
-	}
-
-	// Join with separator
-	result := []string{}
-	for i, col := range paddedColumns {
-		if i > 0 {
-			result = append(result, separator)
-		}
-		result = append(result, col)
-	}
-
-	return lipgloss.JoinHorizontal(lipgloss.Top, result...)
 }
 
 // shouldRenderColumn checks if a column has any enabled bindings
