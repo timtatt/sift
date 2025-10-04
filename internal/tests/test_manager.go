@@ -80,6 +80,11 @@ func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
 			}
 		}
 
+		// provide a time if one isn't present in the log entry
+		if logEntry.Time.IsZero() {
+			logEntry.Time = testOutput.Time
+		}
+
 		if shouldSkipLogLine(log) {
 			return
 		}
