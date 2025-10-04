@@ -33,3 +33,4 @@ go.work.sum
 .DS_Store
 
 /sift
+/build
