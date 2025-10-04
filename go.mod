@@ -7,7 +7,10 @@ require (
 	github.com/stretchr/testify v1.11.1
 )
 
-require github.com/atotto/clipboard v0.1.4 // indirect
+require (
+	github.com/alecthomas/kong v1.12.1 // indirect
+	github.com/atotto/clipboard v0.1.4 // indirect
+)
 
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect

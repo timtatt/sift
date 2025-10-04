@@ -1,37 +1,14 @@
 package main
 
 import (
-	"context"
-	"flag"
-	"fmt"
-	"os"
-
-	"github.com/timtatt/sift/internal/sift"
+	"github.com/alecthomas/kong"
+	"github.com/timtatt/sift/cmd"
 )
 
 func main() {
+	var cli cmd.CLI
 
-	ctx := context.Background()
-
-	var debug bool
-	var nonInteractive bool
-	var raw bool
-	flag.BoolVar(&debug, "debug", false, "enable debug view")
-	flag.BoolVar(&nonInteractive, "non-interactive", false, "skip alternate screen and show inline view only")
-	flag.BoolVar(&nonInteractive, "n", false, "skip alternate screen and show inline view only (shorthand)")
-	flag.BoolVar(&raw, "raw", false, "disable prettified logs")
-	flag.BoolVar(&raw, "r", false, "disable prettified logs")
-	flag.Parse()
-
-	err := sift.Run(ctx, sift.SiftOptions{
-		Debug:          debug,
-		NonInteractive: nonInteractive,
-		PrettifyLogs:   !raw,
-	})
-
-	if err != nil {
-		fmt.Printf("ERROR: %s\n", err.Error())
-		os.Exit(1)
-	}
-
+	ctx := kong.Parse(&cli)
+	err := ctx.Run()
+	ctx.FatalIfErrorf(err)
 }
