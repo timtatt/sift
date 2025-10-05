@@ -111,6 +111,24 @@ func (m *siftModel) isTestVisible(testIndex int) bool {
 	return true
 }
 
+func (m *siftModel) scrollToCursor() {
+	cursorPos := m.GetCursorPos()
+
+	if cursorPos < 0 {
+		return
+	}
+
+	if cursorPos >= m.viewport.YOffset+m.viewport.Height {
+		// cursor is below the viewport, scroll down
+		m.viewport.ScrollDown(cursorPos - (m.viewport.YOffset + m.viewport.Height) + scrollBuffer)
+	}
+
+	if cursorPos < m.viewport.YOffset {
+		// cursor is above the viewport, scroll up
+		m.viewport.ScrollUp(cursorPos - scrollBuffer)
+	}
+}
+
 // ensureCursorVisible ensures the cursor is on a visible test
 // If the current test is hidden, moves to the nearest visible test
 func (m *siftModel) ensureCursorVisible() {
@@ -422,10 +440,10 @@ func (m *siftModel) WindowResize(msg tea.WindowSizeMsg) {
 		m.searchInput.Width = msg.Width
 	}
 
-	m.Recalculate()
+	m.RecalculatePos()
 }
 
-func (m *siftModel) Recalculate() {
+func (m *siftModel) RecalculatePos() {
 	// recalculate the mapping of tests to viewport position
 	// optimization to avoid recalculating the log lengths for every render
 	for _, test := range m.testManager.GetTests {
@@ -471,7 +489,7 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.WindowResize(msg)
 	case RecalculateMsg:
-		m.Recalculate()
+		m.RecalculatePos()
 	case tea.KeyMsg:
 		if m.mode == viewModeInline {
 			return m, nil
@@ -492,8 +510,10 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.ensureCursorVisible()
 			case msg.String() == "ctrl+p":
 				m.PrevTest()
+				m.scrollToCursor()
 			case msg.String() == "ctrl+n":
 				m.NextTest()
+				m.scrollToCursor()
 			default:
 				// Update the textinput with the key
 				var inputCmd tea.Cmd
@@ -571,37 +591,20 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case key.Matches(msg, keys.PrevTest):
 			m.PrevTest()
-
-			// scroll up if selected line is within 'scrollBuffer' of the top
-			cursorDelta := m.viewport.YOffset - m.GetCursorPos() + scrollBuffer
-			if cursorDelta > 0 {
-				m.viewport.ScrollUp(cursorDelta)
-			}
+			m.View()
+			m.scrollToCursor()
 		case key.Matches(msg, keys.NextTest):
 			m.NextTest()
-
-			// scroll down if selected line is within 'scrollBuffer' of the bottom
-			cursorDelta := m.GetCursorPos() - m.viewport.YOffset - m.viewport.Height + scrollBuffer
-			if cursorDelta > 0 {
-				m.viewport.ScrollDown(cursorDelta)
-			}
+			m.View()
+			m.scrollToCursor()
 		case key.Matches(msg, keys.PrevFailingTest):
 			m.PrevFailingTest()
-
-			// scroll up if selected line is within 'scrollBuffer' of the top
-			cursorDelta := m.viewport.YOffset - m.GetCursorPos() + scrollBuffer
-			if cursorDelta > 0 {
-				m.viewport.ScrollUp(cursorDelta)
-			}
+			m.View()
+			m.scrollToCursor()
 		case key.Matches(msg, keys.NextFailingTest):
 			m.NextFailingTest()
-
-			// scroll down if selected line is within 'scrollBuffer' of the bottom
-			cursorDelta := m.GetCursorPos() - m.viewport.YOffset - m.viewport.Height + scrollBuffer
-			if cursorDelta > 0 {
-				m.viewport.ScrollDown(cursorDelta)
-			}
-
+			m.View()
+			m.scrollToCursor()
 		case key.Matches(msg, keys.Help):
 			m.help.ShowAll = !m.help.ShowAll
 		case key.Matches(msg, keys.Quit):
@@ -620,20 +623,12 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case key.Matches(msg, keys.Up):
 			m.CursorUp()
-
-			// scroll up if selected line is within 'scrollBuffer' of the top
-			cursorDelta := m.viewport.YOffset - m.GetCursorPos() + scrollBuffer
-			if cursorDelta > 0 {
-				m.viewport.ScrollUp(cursorDelta)
-			}
+			m.View()
+			m.scrollToCursor()
 		case key.Matches(msg, keys.Down):
 			m.CursorDown()
-
-			// scroll down if selected line is within 'scrollBuffer' of the bottom
-			cursorDelta := m.GetCursorPos() - (m.viewport.YOffset + (m.viewport.Height - scrollBuffer))
-			if cursorDelta > 0 {
-				m.viewport.ScrollDown(cursorDelta)
-			}
+			m.View()
+			m.scrollToCursor()
 		case key.Matches(msg, keys.ToggleTestAlt):
 			test := m.testManager.GetTest(m.cursor.test)
 
