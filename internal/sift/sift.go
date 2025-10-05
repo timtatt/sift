@@ -46,16 +46,23 @@ func (s *sift) ScanStdin() error {
 
 type FrameMsg struct{}
 
+type RecalculateMsg struct{}
+
 // sends a msg to bubbletea model on an interval to ensure the view is being updated according to framerate
-func (s *sift) Frame(ctx context.Context, tps int) {
-	tick := time.NewTicker(time.Second / time.Duration(tps))
-	defer tick.Stop()
+func (s *sift) Frame(ctx context.Context, fps int, recalcInterval int) {
+	frameTick := time.NewTicker(time.Second / time.Duration(fps))
+	defer frameTick.Stop()
+
+	recalulationTicker := time.NewTicker(time.Second / time.Duration(recalcInterval))
+	defer recalulationTicker.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-tick.C:
+		case <-recalulationTicker.C:
+			s.program.Send(RecalculateMsg{})
+		case <-frameTick.C:
 			s.program.Send(FrameMsg{})
 		}
 	}
@@ -126,7 +133,7 @@ func Run(ctx context.Context, opts SiftOptions) error {
 	})
 
 	g.Go(func() error {
-		sift.Frame(ctx, fps)
+		sift.Frame(ctx, fps, 30)
 
 		return nil
 	})

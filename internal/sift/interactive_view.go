@@ -2,12 +2,13 @@ package sift
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lithammer/fuzzysearch/fuzzy"
 	"github.com/timtatt/sift/internal/tests"
-	"github.com/timtatt/sift/pkg/viewbuilder"
+	"github.com/timtatt/sift/pkg/viewport2"
 )
 
 func (m *siftModel) interactiveView() string {
@@ -21,7 +22,7 @@ func (m *siftModel) interactiveView() string {
 	}
 
 	if m.opts.Debug {
-		header += fmt.Sprintf(" cursor: [%d, %d] %d | yoffset: %d, bottom %d", m.cursor.test, m.cursor.log, m.GetCursorPos(), m.viewport.YOffset, m.viewport.YOffset+m.viewport.Height)
+		header += fmt.Sprintf(" cursor: [%d, %d] %d | yoffset: %d, height %d ", m.cursor.test, m.cursor.log, m.GetCursorPos(), m.viewport.YOffset, m.viewport.Height)
 
 	}
 	if m.searchInput.Focused() {
@@ -54,9 +55,8 @@ func (m *siftModel) interactiveView() string {
 		footer += "\n"
 		footer += lipgloss.NewStyle().PaddingTop(1).Render(m.help.View(keys))
 
-		testViewHeight := lipgloss.Height(testView)
 		maxTestViewHeight := m.windowSize.Height - lipgloss.Height(footer) - lipgloss.Height(header)
-		m.viewport.Height = min(testViewHeight, maxTestViewHeight)
+		m.viewport.Height = min(testView.Pos(), maxTestViewHeight)
 
 		s += m.viewport.View()
 
@@ -79,8 +79,8 @@ func (m *siftModel) statusView(summary *tests.Summary) string {
 	return styleOutcomePass.Render("PASSED")
 }
 
-func (m *siftModel) testView() (string, *tests.Summary) {
-	vb := viewbuilder.New()
+func (m *siftModel) testView() (*viewport2.VirtualContents, *tests.Summary) {
+	vvp := viewport2.NewVirtualContents(m.viewport.Width, m.viewport.Height, m.viewport.YOffset)
 
 	summary := tests.NewSummary()
 
@@ -127,44 +127,48 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 			)
 		}
 
-		ts.viewportPos = vb.Lines()
+		ts.viewportPos = vvp.Pos()
 
-		vb.Add(fmt.Sprintf("%s%s %s %s", indent, statusIcon, testName, elapsed))
+		line := fmt.Sprintf("%s%s %s %s", indent, statusIcon, testName, elapsed)
 		if m.opts.Debug {
-			vb.Add(fmt.Sprintf(" [%d]", ts.viewportPos))
+			line += fmt.Sprintf(" [%d]", ts.viewportPos)
 		}
-		vb.AddLine()
+		vvp.Add(line)
 
 		if ts.toggled {
 			logs := m.testManager.GetLogs(test.Ref)
 
 			for logIdx, log := range logs {
 
-				logStyle := lipgloss.NewStyle()
-				prefix := "  "
-				if testHighlighted && logIdx == m.cursor.log {
-					prefix = "> "
-					logStyle = lipgloss.NewStyle().Bold(true)
-				} else if !testHighlighted {
-					logStyle = styleSecondary
-				}
+				estLen := m.estimateLogLength(log)
 
-				var styledLog string
-				if m.opts.PrettifyLogs {
-					styledLog = prettifyLogEntry(log, logStyle)
-				} else {
-					styledLog = logStyle.Render(log.Message)
-				}
+				vvp.AddCond(estLen, func() string {
+					logStyle := lipgloss.NewStyle()
+					prefix := "  "
+					if testHighlighted && logIdx == m.cursor.log {
+						prefix = "> "
+						logStyle = lipgloss.NewStyle().Bold(true)
+					} else if !testHighlighted {
+						logStyle = styleSecondary
+					}
 
-				styledLog = styleLog.Width(m.viewport.Width - 2).Render(styledLog)
+					var styledLog string
 
-				vb.Add(indent + prefix + styledLog)
-				vb.AddLine()
+					if m.opts.PrettifyLogs {
+						styledLog = prettifyLogEntry(log, logStyle)
+					} else {
+						styledLog = logStyle.Render(log.Message)
+					}
+
+					return prefix + styledLog
+				})
 			}
 		}
 	}
 
-	return vb.String(), summary
+	slog.Debug("virtual contents", "lines", len(vvp.Lines()), "pos", vvp.Pos())
+
+	return vvp, summary
 }
 
 func getIndentLevel(testName string) int {

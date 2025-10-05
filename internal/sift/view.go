@@ -1,21 +1,28 @@
 package sift
 
 import (
+	"math"
 	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
-	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lithammer/fuzzysearch/fuzzy"
 	"github.com/timtatt/sift/internal/tests"
 	"github.com/timtatt/sift/pkg/helpview"
+	"github.com/timtatt/sift/pkg/viewport2"
 )
 
 type testState struct {
-	toggled     bool
+	// whether the test is expanded to show logs
+	toggled bool
+
+	// keeps track of the position of the test in the viewport
 	viewportPos int
+
+	// keeps the relative position of the log lines to the viewportPos
+	viewportLogRelPos []int
 }
 
 type viewMode int
@@ -28,8 +35,11 @@ const (
 type siftModel struct {
 	opts SiftOptions
 
+	// holds the tests and logs from the input
 	testManager *tests.TestManager
-	testState   map[tests.TestReference]*testState
+
+	// holds the view state of each test
+	testState map[tests.TestReference]*testState
 
 	cursor *cursor
 
@@ -40,7 +50,7 @@ type siftModel struct {
 
 	ready     bool
 	started   bool
-	viewport  viewport.Model
+	viewport  viewport2.Model
 	keyBuffer []string
 
 	help *helpview.WrappingHelpView
@@ -303,7 +313,13 @@ func (m *siftModel) GetCursorPos() int {
 		return -1
 	}
 
-	pos := ts.viewportPos + m.cursor.log
+	// get the relative position of the log line in the viewport
+	logRelPos := 0
+	if len(ts.viewportLogRelPos) > 0 {
+		logRelPos = ts.viewportLogRelPos[min(m.cursor.log, len(ts.viewportLogRelPos)-1)]
+	}
+
+	pos := ts.viewportPos + logRelPos
 
 	if ts.toggled {
 		// if the test is toggled it has 1 extra line
@@ -391,6 +407,51 @@ const (
 	scrollBuffer = 5
 )
 
+func (m *siftModel) WindowResize(msg tea.WindowSizeMsg) {
+	m.windowSize = msg
+	if !m.ready {
+		m.help.Width = msg.Width
+		m.help.ColumnWidth = 20
+		m.viewport = viewport2.New(msg.Width, msg.Height)
+		m.viewport.KeyMap = keys.viewport
+		m.searchInput.Width = msg.Width
+		m.ready = true
+	} else {
+		m.help.Width = msg.Width
+		m.viewport.Width = msg.Width
+		m.searchInput.Width = msg.Width
+	}
+
+	m.Recalculate()
+}
+
+func (m *siftModel) Recalculate() {
+	// recalculate the mapping of tests to viewport position
+	// optimization to avoid recalculating the log lengths for every render
+	for _, test := range m.testManager.GetTests {
+		state, ok := m.testState[test.Ref]
+		if !ok {
+			continue
+		}
+
+		logs := m.testManager.GetLogs(test.Ref)
+		state.viewportLogRelPos = make([]int, 0, len(logs))
+
+		accumulatedPos := 0
+		for _, log := range logs {
+			logLines := lineCount(m.estimateLogLength(log), m.viewport.Width)
+
+			state.viewportLogRelPos = append(state.viewportLogRelPos, accumulatedPos)
+
+			accumulatedPos += logLines
+		}
+	}
+}
+
+func lineCount(len int, width int) int {
+	return int(math.Ceil(float64(len) / float64(width)))
+}
+
 func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var (
 		cmd  tea.Cmd
@@ -408,19 +469,9 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.windowSize = msg
-		if !m.ready {
-			m.help.Width = msg.Width
-			m.help.ColumnWidth = 20
-			m.viewport = viewport.New(msg.Width, msg.Height)
-			m.viewport.KeyMap = keys.viewport
-			m.searchInput.Width = msg.Width
-			m.ready = true
-		} else {
-			m.help.Width = msg.Width
-			m.viewport.Width = msg.Width
-			m.searchInput.Width = msg.Width
-		}
+		m.WindowResize(msg)
+	case RecalculateMsg:
+		m.Recalculate()
 	case tea.KeyMsg:
 		if m.mode == viewModeInline {
 			return m, nil
@@ -579,7 +630,7 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.CursorDown()
 
 			// scroll down if selected line is within 'scrollBuffer' of the bottom
-			cursorDelta := m.GetCursorPos() - m.viewport.YOffset - m.viewport.Height + scrollBuffer
+			cursorDelta := m.GetCursorPos() - (m.viewport.YOffset + (m.viewport.Height - scrollBuffer))
 			if cursorDelta > 0 {
 				m.viewport.ScrollDown(cursorDelta)
 			}
