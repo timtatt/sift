@@ -4,7 +4,9 @@
 
 sift is a lightweight terminal UI for displaying Go test results. It allows developers to traverse verbose Go test logs in their terminal. Each test is able to be expanded and collapsed to only show the logs that matter.
 
-<img src="/assets/screenshot.png" width="60%" alt="Screenshot of the Sift UI">
+## Screenshot
+
+<img width="60%" alt="screenshot" src="https://github.com/user-attachments/assets/604c9bf1-d0a2-4e3a-a34d-eb87c7e93a42" />
 
 ## Installation
 
@@ -34,6 +36,10 @@ go test {your-go-package} -v -json | sift
 # eg.
 go test ./... -v -json | sift
 ```
+
+## Demo
+
+<video width="60%" src="https://github.com/user-attachments/assets/44b23d46-739b-4956-8894-25ed6d7ae5e9"></video>
 
 ### CLI Flags
 
