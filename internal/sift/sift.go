@@ -53,6 +53,7 @@ func (s *sift) Frame(ctx context.Context, fps int, recalcInterval int) {
 	frameTick := time.NewTicker(time.Second / time.Duration(fps))
 	defer frameTick.Stop()
 
+	// recalculate ticker is to ensure that the view state is recalculated at a lower frequency than the frame rate
 	recalulationTicker := time.NewTicker(time.Second / time.Duration(recalcInterval))
 	defer recalulationTicker.Stop()
 

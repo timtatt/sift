@@ -28,21 +28,6 @@ func NewVirtualContents(width int, height int, offsetY int) *VirtualContents {
 	}
 }
 
-func wrapText(text string, width int) string {
-	var output string
-	lastBreak := 0
-	for i, c := range text {
-		lineLength := i - lastBreak
-		if lineLength >= width {
-			output += "\n"
-			lastBreak = i
-		}
-		output += string(c)
-	}
-
-	return output
-}
-
 func (v *VirtualContents) AddCond(clen int, c func() string) {
 	lineCount := lineCount(clen, v.width)
 
