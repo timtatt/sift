@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"time"
 
@@ -70,6 +71,20 @@ func Run(ctx context.Context, opts SiftOptions) error {
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+
+	if opts.Debug {
+		logFile, err := os.Create("/tmp/sift.log")
+		if err != nil {
+			return fmt.Errorf("failed to create log file: %w", err)
+		}
+
+		logger := slog.New(slog.NewTextHandler(logFile, &slog.HandlerOptions{
+			Level: slog.LevelDebug,
+		}))
+
+		slog.SetDefault(logger)
+		slog.DebugContext(ctx, "sift starting")
+	}
 
 	fps := 120
 
