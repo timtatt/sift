@@ -4,6 +4,11 @@ on:
     tags:
       - 'v*'
   pull_request:
+    paths-ignore: 
+      - '*.md'
+      - '*.txt'
+      - '*.yml'
+      - '*.yaml'
     branches:
       - main
 
