@@ -113,17 +113,6 @@ The keymaps are based on vim motion standard keymaps for scrolling and managing 
 | `m`            | Change mode      |
 | `q` / `ctrl+c` | Quit             |
 
-## Feature Roadmap
-
-- [ ] Filter tests by status (pass/fail/skip)
-- [ ] Support for light mode
-- [ ] Add animated chars
-
-## Bug Fixes
-
-- [ ] When items collapsed and viewport is too large, rerender to remove whitespace
-- [ ] Handling invalid inputs provided
-
 ## Credits
 
 The UI design of `sift` is heavily inspired by the [vitest cli](https://github.com/vitest-dev/vitest)
