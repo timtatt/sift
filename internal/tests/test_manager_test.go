@@ -382,3 +382,79 @@ func TestGetLogs(t *testing.T) {
 		assert.Nil(t, tm.GetLogs(nonExistentRef))
 	})
 }
+
+func TestBuildErrors(t *testing.T) {
+	t.Run("build-output creates logs", func(t *testing.T) {
+		tm := NewTestManager(TestManagerOpts{ParseLogs: false})
+		testRef := TestReference{Package: "testpkg", Test: ""}
+
+		tm.AddTestOutput(TestOutputLine{
+			Action:     "build-output",
+			ImportPath: "testpkg",
+			Output:     "# testpkg\n",
+			Time:       time.Now(),
+		})
+		tm.AddTestOutput(TestOutputLine{
+			Action:     "build-output",
+			ImportPath: "testpkg",
+			Output:     "./main.go:4:13: syntax error\n",
+			Time:       time.Now(),
+		})
+
+		logs := tm.GetLogs(testRef)
+		require.Len(t, logs, 2)
+		assert.Equal(t, "# testpkg", logs[0].Message)
+		assert.Equal(t, "./main.go:4:13: syntax error", logs[1].Message)
+	})
+
+	t.Run("build-fail creates test node", func(t *testing.T) {
+		tm := NewTestManager(TestManagerOpts{ParseLogs: false})
+
+		tm.AddTestOutput(TestOutputLine{
+			Action:     "build-output",
+			ImportPath: "testpkg",
+			Output:     "# testpkg\n",
+			Time:       time.Now(),
+		})
+		tm.AddTestOutput(TestOutputLine{
+			Action:     "build-fail",
+			ImportPath: "testpkg",
+		})
+
+		assert.Equal(t, 1, tm.GetTestCount())
+		test := tm.GetTest(0)
+		require.NotNil(t, test)
+		assert.Equal(t, "testpkg", test.Ref.Package)
+		assert.Equal(t, "", test.Ref.Test)
+		assert.Equal(t, "fail", test.Status)
+	})
+
+	t.Run("build-fail updates existing test node", func(t *testing.T) {
+		tm := NewTestManager(TestManagerOpts{ParseLogs: false})
+		testRef := TestReference{Package: "testpkg", Test: ""}
+
+		// First, add some build output
+		tm.AddTestOutput(TestOutputLine{
+			Action:     "build-output",
+			ImportPath: "testpkg",
+			Output:     "./main.go:4:13: syntax error\n",
+			Time:       time.Now(),
+		})
+
+		// Then mark it as failed
+		tm.AddTestOutput(TestOutputLine{
+			Action:     "build-fail",
+			ImportPath: "testpkg",
+		})
+
+		assert.Equal(t, 1, tm.GetTestCount())
+		test := tm.GetTest(0)
+		require.NotNil(t, test)
+		assert.Equal(t, "fail", test.Status)
+
+		// Verify logs are still there
+		logs := tm.GetLogs(testRef)
+		require.Len(t, logs, 1)
+		assert.Equal(t, "./main.go:4:13: syntax error", logs[0].Message)
+	})
+}

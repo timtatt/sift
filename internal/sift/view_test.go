@@ -79,7 +79,7 @@ func TestGetDisplayName(t *testing.T) {
 		{
 			name:     "empty string",
 			testName: "",
-			want:     "",
+			want:     "[build failed]",
 		},
 		{
 			name:     "trailing slash",

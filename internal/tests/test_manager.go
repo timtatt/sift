@@ -53,21 +53,76 @@ func shouldSkipLogLine(line string) bool {
 
 // JSON output from `go test -json`
 type TestOutputLine struct {
-	Time    time.Time `json:"time"`
-	Action  string    `json:"action"`
-	Package string    `json:"package"`
-	Test    string    `json:"test,omitempty"`
-	Elapsed float64   `json:"elapsed,omitempty"`
-	Output  string    `json:"output,omitempty"`
+	Time       time.Time `json:"time"`
+	Action     string    `json:"action"`
+	Package    string    `json:"package"`
+	ImportPath string    `json:"ImportPath,omitempty"` // Used for build-output and build-fail actions
+	Test       string    `json:"test,omitempty"`
+	Elapsed    float64   `json:"elapsed,omitempty"`
+	Output     string    `json:"output,omitempty"`
 }
 
 func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
+	// For build-output and build-fail, use ImportPath instead of Package
+	pkg := testOutput.Package
+	if pkg == "" && testOutput.ImportPath != "" {
+		pkg = testOutput.ImportPath
+	}
+
 	testRef := TestReference{
-		Package: testOutput.Package,
+		Package: pkg,
 		Test:    testOutput.Test,
 	}
 
 	switch testOutput.Action {
+	case "build-output":
+		// Handle build errors (compilation failures)
+		log := strings.TrimRight(testOutput.Output, "\n")
+
+		var logEntry logparse.LogEntry
+		if tm.opts.ParseLogs {
+			logEntry = logparse.ParseLog(log)
+		} else {
+			logEntry = logparse.LogEntry{
+				Message: log,
+			}
+		}
+
+		// provide a time if one isn't present in the log entry
+		if logEntry.Time.IsZero() {
+			logEntry.Time = testOutput.Time
+		}
+
+		tm.testLogLock.Lock()
+		defer tm.testLogLock.Unlock()
+
+		_, ok := tm.testLogs[testRef]
+
+		if ok {
+			tm.testLogs[testRef] = append(tm.testLogs[testRef], logEntry)
+		} else {
+			tm.testLogs[testRef] = []logparse.LogEntry{logEntry}
+		}
+
+	case "build-fail":
+		// Create a test node for the build failure if it doesn't exist
+		tm.testLock.Lock()
+		defer tm.testLock.Unlock()
+
+		testIdx := slices.IndexFunc(tm.tests, func(t *TestNode) bool {
+			return t.Ref == testRef
+		})
+		if testIdx == -1 {
+			// Create a new test node for the build failure
+			tm.tests = append(tm.tests, &TestNode{
+				Ref:    testRef,
+				Status: "fail",
+			})
+		} else {
+			// Update existing test node to failed
+			tm.tests[testIdx].Status = "fail"
+		}
+
 	case "output":
 		log := strings.TrimRight(testOutput.Output, "\n")
 

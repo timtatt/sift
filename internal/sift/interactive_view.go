@@ -172,6 +172,9 @@ func getIndentLevel(testName string) int {
 }
 
 func getDisplayName(testName string) string {
+	if testName == "" {
+		return "[build failed]"
+	}
 	lastSlash := strings.LastIndex(testName, "/")
 	if lastSlash == -1 {
 		return testName

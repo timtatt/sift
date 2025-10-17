@@ -44,6 +44,21 @@ func (m *siftModel) inlineView() string {
 
 		vb.Add(fmt.Sprintf("%s%s %s%s", indent, statusIcon, testName, elapsed))
 		vb.AddLine()
+
+		// Show logs for failed tests (including build failures)
+		if test.Status == "fail" {
+			logs := m.testManager.GetLogs(test.Ref)
+			for _, log := range logs {
+				var styledLog string
+				if m.opts.PrettifyLogs {
+					styledLog = prettifyLogEntry(log, styleSecondary)
+				} else {
+					styledLog = styleSecondary.Render(log.Message)
+				}
+				vb.Add(indent + "  " + styledLog)
+				vb.AddLine()
+			}
+		}
 	}
 
 	vb.AddLine()
