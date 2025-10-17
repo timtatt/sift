@@ -30,8 +30,12 @@ var (
 		Dark:  "#005FFF", // ANSI 27 equivalent bright blue for dark mode
 	}
 	colorMutedBlue = lipgloss.AdaptiveColor{
+		Light: "#4A90E2", // Medium blue for light mode (skip icon)
+		Dark:  "#5B9BD5", // Brighter blue for dark mode (skip icon)
+	}
+	colorHighlight = lipgloss.AdaptiveColor{
 		Light: "#E0E8F0", // Light blue/grey for light mode (highlight background)
-		Dark:  "#2B57A3", // Original color for dark mode
+		Dark:  "#2B57A3", // Original color for dark mode (highlight background)
 	}
 	colorGrey = lipgloss.AdaptiveColor{
 		Light: "#6C6C6C", // Medium grey for light mode
@@ -53,7 +57,7 @@ var (
 			Foreground(colorMutedBlue)
 
 	styleSecondary   = lipgloss.NewStyle().Foreground(colorGrey)
-	styleHighlighted = lipgloss.NewStyle().Background(colorMutedBlue)
+	styleHighlighted = lipgloss.NewStyle().Background(colorHighlight)
 
 	styleLog = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.AdaptiveColor{
 		Light: "#4A4A4A", // Darker grey for light mode
