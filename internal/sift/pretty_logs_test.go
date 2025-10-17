@@ -163,3 +163,40 @@ func TestPrettifyLogEntryPerformance(t *testing.T) {
 		assert.Contains(t, result, " | ")
 	}
 }
+
+// BenchmarkPrettifyLogEntry benchmarks the performance of prettifyLogEntry
+func BenchmarkPrettifyLogEntry(b *testing.B) {
+	baseTime := time.Date(2024, 1, 1, 12, 30, 45, 123000000, time.UTC)
+	baseStyle := lipgloss.NewStyle()
+
+	tests := []struct {
+		name       string
+		fieldCount int
+	}{
+		{"no_fields", 0},
+		{"few_fields", 3},
+		{"many_fields", 20},
+		{"very_many_fields", 50},
+	}
+
+	for _, tt := range tests {
+		b.Run(tt.name, func(b *testing.B) {
+			additional := make(map[string]any)
+			for i := 0; i < tt.fieldCount; i++ {
+				additional["field"+string(rune('A'+i%26))+string(rune('0'+i/26))] = "value" + string(rune('0'+i%10))
+			}
+
+			entry := logparse.LogEntry{
+				Time:       baseTime,
+				Level:      "INFO",
+				Message:    "test message",
+				Additional: additional,
+			}
+
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				_ = prettifyLogEntry(entry, baseStyle)
+			}
+		})
+	}
+}
