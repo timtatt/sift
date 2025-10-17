@@ -10,6 +10,15 @@ import (
 	"github.com/timtatt/sift/pkg/logparse"
 )
 
+// generateTestFields creates a map with the specified number of test fields
+func generateTestFields(count int) map[string]any {
+	fields := make(map[string]any)
+	for i := 0; i < count; i++ {
+		fields[fmt.Sprintf("field%d", i)] = fmt.Sprintf("value%d", i)
+	}
+	return fields
+}
+
 func TestPrettifyLogEntry(t *testing.T) {
 	baseTime := time.Date(2024, 1, 1, 12, 30, 45, 123000000, time.UTC)
 	baseStyle := lipgloss.NewStyle()
@@ -144,16 +153,11 @@ func TestPrettifyLogEntryPerformance(t *testing.T) {
 	baseStyle := lipgloss.NewStyle()
 
 	// Create an entry with many additional fields to test performance
-	additional := make(map[string]any)
-	for i := 0; i < 50; i++ {
-		additional[fmt.Sprintf("field%d", i)] = fmt.Sprintf("value%d", i)
-	}
-
 	entry := logparse.LogEntry{
 		Time:       baseTime,
 		Level:      "INFO",
 		Message:    "test message with many fields",
-		Additional: additional,
+		Additional: generateTestFields(50),
 	}
 
 	// Run the function multiple times to ensure it doesn't panic or hang
@@ -182,16 +186,11 @@ func BenchmarkPrettifyLogEntry(b *testing.B) {
 
 	for _, tt := range tests {
 		b.Run(tt.name, func(b *testing.B) {
-			additional := make(map[string]any)
-			for i := 0; i < tt.fieldCount; i++ {
-				additional[fmt.Sprintf("field%d", i)] = fmt.Sprintf("value%d", i)
-			}
-
 			entry := logparse.LogEntry{
 				Time:       baseTime,
 				Level:      "INFO",
 				Message:    "test message",
-				Additional: additional,
+				Additional: generateTestFields(tt.fieldCount),
 			}
 
 			b.ResetTimer()
