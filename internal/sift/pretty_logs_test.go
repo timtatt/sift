@@ -1,6 +1,7 @@
 package sift
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -145,7 +146,7 @@ func TestPrettifyLogEntryPerformance(t *testing.T) {
 	// Create an entry with many additional fields to test performance
 	additional := make(map[string]any)
 	for i := 0; i < 50; i++ {
-		additional["field"+string(rune('A'+i%26))+string(rune('0'+i/26))] = "value" + string(rune('0'+i%10))
+		additional[fmt.Sprintf("field%d", i)] = fmt.Sprintf("value%d", i)
 	}
 
 	entry := logparse.LogEntry{
@@ -183,7 +184,7 @@ func BenchmarkPrettifyLogEntry(b *testing.B) {
 		b.Run(tt.name, func(b *testing.B) {
 			additional := make(map[string]any)
 			for i := 0; i < tt.fieldCount; i++ {
-				additional["field"+string(rune('A'+i%26))+string(rune('0'+i/26))] = "value" + string(rune('0'+i%10))
+				additional[fmt.Sprintf("field%d", i)] = fmt.Sprintf("value%d", i)
 			}
 
 			entry := logparse.LogEntry{
