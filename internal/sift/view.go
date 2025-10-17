@@ -86,6 +86,12 @@ func NewSiftModel(opts SiftOptions) *siftModel {
 	}
 }
 
+// normalizeSearchQuery removes spaces from the search query since Go replaces
+// spaces with underscores in test names
+func normalizeSearchQuery(query string) string {
+	return strings.ReplaceAll(query, " ", "")
+}
+
 // isTestVisible checks if a test passes the current search filter
 func (m *siftModel) isTestVisible(testIndex int) bool {
 	test := m.testManager.GetTest(testIndex)
@@ -95,8 +101,7 @@ func (m *siftModel) isTestVisible(testIndex int) bool {
 
 	searchQuery := m.searchInput.Value()
 	if searchQuery != "" {
-		// Remove spaces from search query since Go replaces spaces with underscores in test names
-		normalizedQuery := strings.ReplaceAll(searchQuery, " ", "")
+		normalizedQuery := normalizeSearchQuery(searchQuery)
 		if !fuzzy.MatchFold(normalizedQuery, test.Ref.Test) {
 			return false
 		}

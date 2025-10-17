@@ -848,6 +848,52 @@ func createTestModel(opts testModelOpts) *siftModel {
 	return m
 }
 
+func TestNormalizeSearchQuery(t *testing.T) {
+	testCases := []struct {
+		name  string
+		query string
+		want  string
+	}{
+		{
+			name:  "no spaces",
+			query: "test_with_underscores",
+			want:  "test_with_underscores",
+		},
+		{
+			name:  "single space",
+			query: "test name",
+			want:  "testname",
+		},
+		{
+			name:  "multiple spaces",
+			query: "test with multiple spaces",
+			want:  "testwithmultiplespaces",
+		},
+		{
+			name:  "leading and trailing spaces",
+			query: " test name ",
+			want:  "testname",
+		},
+		{
+			name:  "empty string",
+			query: "",
+			want:  "",
+		},
+		{
+			name:  "only spaces",
+			query: "   ",
+			want:  "",
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			got := normalizeSearchQuery(tt.query)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestIsTestVisible_SpaceHandling(t *testing.T) {
 	testCases := []struct {
 		name        string

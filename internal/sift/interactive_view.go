@@ -94,8 +94,7 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 
 		searchQuery := m.searchInput.Value()
 		if searchQuery != "" {
-			// Remove spaces from search query since Go replaces spaces with underscores in test names
-			normalizedQuery := strings.ReplaceAll(searchQuery, " ", "")
+			normalizedQuery := normalizeSearchQuery(searchQuery)
 			if !fuzzy.MatchFold(normalizedQuery, test.Ref.Test) {
 				continue
 			}
