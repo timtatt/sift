@@ -847,3 +847,86 @@ func createTestModel(opts testModelOpts) *siftModel {
 
 	return m
 }
+
+func TestIsTestVisible_SpaceHandling(t *testing.T) {
+	testCases := []struct {
+		name        string
+		testName    string
+		searchQuery string
+		want        bool
+	}{
+		{
+			name:        "exact match with underscores",
+			testName:    "TestWithSpaces/test_with_underscores",
+			searchQuery: "test_with_underscores",
+			want:        true,
+		},
+		{
+			name:        "search with spaces matches underscores",
+			testName:    "TestWithSpaces/test_with_underscores",
+			searchQuery: "test with underscores",
+			want:        true,
+		},
+		{
+			name:        "partial match with spaces",
+			testName:    "TestWithSpaces/test_with_underscores",
+			searchQuery: "with underscores",
+			want:        true,
+		},
+		{
+			name:        "fuzzy match with spaces",
+			testName:    "TestWithSpaces/test_with_underscores",
+			searchQuery: "test under",
+			want:        true,
+		},
+		{
+			name:        "no match",
+			testName:    "TestWithSpaces/test_with_underscores",
+			searchQuery: "xyz",
+			want:        false,
+		},
+		{
+			name:        "empty search matches all",
+			testName:    "TestWithSpaces/test_with_underscores",
+			searchQuery: "",
+			want:        true,
+		},
+		{
+			name:        "mixed spaces and underscores in search",
+			testName:    "TestWithSpaces/test_with_underscores",
+			searchQuery: "test with_underscores",
+			want:        true,
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			m := NewSiftModel(SiftOptions{})
+			testRef := tests.TestReference{
+				Package: "test/package",
+				Test:    tt.testName,
+			}
+
+			m.testManager.AddTestOutput(tests.TestOutputLine{
+				Action:  "run",
+				Package: testRef.Package,
+				Test:    testRef.Test,
+			})
+			m.testManager.AddTestOutput(tests.TestOutputLine{
+				Action:  "pass",
+				Package: testRef.Package,
+				Test:    testRef.Test,
+			})
+
+			m.testState[testRef] = &testState{
+				toggled:     false,
+				viewportPos: 0,
+			}
+
+			m.searchInput.SetValue(tt.searchQuery)
+
+			got := m.isTestVisible(0)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
