@@ -42,6 +42,16 @@ type TestNode struct {
 	Status  string // pass, fail, run
 }
 
+// addLogEntry is a helper method to add a log entry to the test logs
+// Caller must hold testLogLock
+func (tm *TestManager) addLogEntry(testRef TestReference, logEntry logparse.LogEntry) {
+	if _, ok := tm.testLogs[testRef]; ok {
+		tm.testLogs[testRef] = append(tm.testLogs[testRef], logEntry)
+	} else {
+		tm.testLogs[testRef] = []logparse.LogEntry{logEntry}
+	}
+}
+
 // Filters out redundant Go test output lines like "=== RUN" and "--- PASS/FAIL/SKIP"
 func shouldSkipLogLine(line string) bool {
 	trimmed := strings.TrimLeft(line, " \t")
@@ -96,13 +106,7 @@ func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
 		tm.testLogLock.Lock()
 		defer tm.testLogLock.Unlock()
 
-		_, ok := tm.testLogs[testRef]
-
-		if ok {
-			tm.testLogs[testRef] = append(tm.testLogs[testRef], logEntry)
-		} else {
-			tm.testLogs[testRef] = []logparse.LogEntry{logEntry}
-		}
+		tm.addLogEntry(testRef, logEntry)
 
 	case "build-fail":
 		// Create a test node for the build failure if it doesn't exist
@@ -147,13 +151,7 @@ func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
 		tm.testLogLock.Lock()
 		defer tm.testLogLock.Unlock()
 
-		_, ok := tm.testLogs[testRef]
-
-		if ok {
-			tm.testLogs[testRef] = append(tm.testLogs[testRef], logEntry)
-		} else {
-			tm.testLogs[testRef] = []logparse.LogEntry{logEntry}
-		}
+		tm.addLogEntry(testRef, logEntry)
 
 	case "run":
 		tm.testLock.Lock()
