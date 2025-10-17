@@ -42,8 +42,8 @@ type TestNode struct {
 	Status  string // pass, fail, run
 }
 
-// addLogEntry is a helper method to add a log entry to the test logs
-// Caller must hold testLogLock
+// addLogEntry is a helper method to add a log entry to the test logs.
+// This method is NOT thread-safe. Caller must hold testLogLock before calling.
 func (tm *TestManager) addLogEntry(testRef TestReference, logEntry logparse.LogEntry) {
 	if _, ok := tm.testLogs[testRef]; ok {
 		tm.testLogs[testRef] = append(tm.testLogs[testRef], logEntry)
