@@ -3,6 +3,7 @@ package tests
 type TestSummary struct {
 	Passed  int
 	Failed  int
+	Skipped int
 	Running int
 }
 
@@ -30,6 +31,9 @@ func (s *Summary) AddPackage(pkg string, status string) {
 	case "fail":
 		s.total.Failed++
 		ps.Failed++
+	case "skip":
+		s.total.Skipped++
+		ps.Skipped++
 	case "run":
 		s.total.Running++
 		ps.Running++
@@ -45,9 +49,13 @@ func (s *Summary) Total() TestSummary {
 func (s *Summary) PackageSummary() TestSummary {
 	ps := TestSummary{}
 	for _, p := range s.packages {
-		ps.Passed += p.Passed
-		ps.Failed += p.Failed
-		ps.Running += p.Running
+		if p.Running > 0 {
+			ps.Running++
+		} else if p.Failed > 0 {
+			ps.Failed++
+		} else {
+			ps.Passed++
+		}
 	}
 	return ps
 }
