@@ -75,7 +75,7 @@ func NewSiftModel(opts SiftOptions) *siftModel {
 			ParseLogs: opts.PrettifyLogs,
 		}),
 		testState:      make(map[tests.TestReference]*testState),
-		autoToggleMode: true,
+		autoToggleMode: false,
 		help:           helpview.New(),
 		cursor: &cursor{
 			test: 0,
