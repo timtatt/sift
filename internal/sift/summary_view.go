@@ -41,6 +41,10 @@ func (m *siftModel) summaryView(summary *tests.Summary) string {
 		s += styleCross.Bold(true).Render(fmt.Sprintf("%d failed ", total.Failed))
 	}
 
+	if total.Skipped > 0 {
+		s += styleSkip.Bold(true).Render(fmt.Sprintf("%d skipped ", total.Skipped))
+	}
+
 	if total.Running > 0 {
 		s += styleSecondary.Render(fmt.Sprintf("%d running ", total.Running))
 	}

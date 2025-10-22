@@ -3,6 +3,7 @@ package sift
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/timtatt/sift/internal/tests"
@@ -78,10 +79,25 @@ func (m *siftModel) statusView(summary *tests.Summary) string {
 	return styleOutcomePass.Render("PASSED")
 }
 
+func formatDuration(d time.Duration) string {
+	if d.Milliseconds() < 1000 {
+		return fmt.Sprintf("%dms", d.Milliseconds())
+	} else if d.Seconds() < 60 {
+		return fmt.Sprintf("%.0fs", d.Seconds())
+	} else {
+		minutes := int(d.Minutes())
+		seconds := int(d.Seconds()) % 60
+		return fmt.Sprintf("%dm%ds", minutes, seconds)
+	}
+}
+
 func (m *siftModel) testView() (string, *tests.Summary) {
 	vb := viewbuilder.New()
 
 	summary := tests.NewSummary()
+
+	stack := newTestStack()
+	var lastPackage string
 
 	for i, test := range m.testManager.GetTests {
 
@@ -93,6 +109,15 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 
 		if !m.isTestVisible(test) {
 			continue
+		}
+
+		if test.Ref.Package != lastPackage {
+			if lastPackage != "" {
+				vb.AddLine()
+			}
+			vb.Add(styleSecondary.Render(test.Ref.Package))
+			vb.AddLine()
+			lastPackage = test.Ref.Package
 		}
 
 		testHighlighted := m.cursor.test == i
@@ -110,9 +135,11 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 			statusIcon = styleTick.Render("\u2713")
 		}
 
-		indentLevel := getIndentLevel(test.Ref.Test)
+		prefixTest := stack.PopUntilPrefix(test.Ref.Test)
+		testName, _ := strings.CutPrefix(test.Ref.Test, prefixTest)
+
+		indentLevel := stack.Len()
 		indent := getIndentWithLines(indentLevel)
-		testName := getDisplayName(test.Ref.Test)
 
 		if testHighlighted {
 			testName = styleHighlighted.Render(testName)
@@ -121,7 +148,7 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 		elapsed := ""
 		if test.Status != "run" {
 			elapsed = styleSecondary.Render(
-				fmt.Sprintf("(%.2fs)", test.Elapsed.Seconds()),
+				formatDuration(test.Elapsed),
 			)
 		}
 
@@ -160,6 +187,8 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 				vb.AddLine()
 			}
 		}
+
+		stack.Push(test.Ref.Test)
 	}
 
 	return vb.String(), summary

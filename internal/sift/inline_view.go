@@ -16,8 +16,20 @@ func (m *siftModel) inlineView() string {
 	vb := viewbuilder.New()
 	summary := tests.NewSummary()
 
+	stack := newTestStack()
+	var lastPackage string
+
 	for _, test := range m.testManager.GetTests {
 		summary.AddPackage(test.Ref.Package, test.Status)
+
+		if test.Ref.Package != lastPackage {
+			if lastPackage != "" {
+				vb.AddLine()
+			}
+			vb.Add(styleSecondary.Render(test.Ref.Package))
+			vb.AddLine()
+			lastPackage = test.Ref.Package
+		}
 
 		var statusIcon string
 		switch test.Status {
@@ -31,19 +43,23 @@ func (m *siftModel) inlineView() string {
 			statusIcon = styleTick.Render("\u2713")
 		}
 
-		indentLevel := getIndentLevel(test.Ref.Test)
-		indent := strings.Repeat("  ", indentLevel)
-		testName := getDisplayName(test.Ref.Test)
+		prefixTest := stack.PopUntilPrefix(test.Ref.Test)
+		testName, _ := strings.CutPrefix(test.Ref.Test, prefixTest)
+
+		indentLevel := stack.Len()
+		indent := getIndentWithLines(indentLevel)
 
 		elapsed := ""
 		if test.Status != "run" {
 			elapsed = styleSecondary.Render(
-				fmt.Sprintf(" (%.2fs)", test.Elapsed.Seconds()),
+				formatDuration(test.Elapsed),
 			)
 		}
 
-		vb.Add(fmt.Sprintf("%s%s %s%s", indent, statusIcon, testName, elapsed))
+		vb.Add(fmt.Sprintf("%s%s %s %s", indent, statusIcon, testName, elapsed))
 		vb.AddLine()
+
+		stack.Push(test.Ref.Test)
 	}
 
 	vb.AddLine()
