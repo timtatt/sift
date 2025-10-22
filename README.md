@@ -11,7 +11,7 @@ sift is a lightweight terminal UI for displaying Go test results. It allows deve
 ## Installation
 
 ```bash
-go install github.com/timtatt/sift@v0.7.0
+go install github.com/timtatt/sift@v0.10.0
 ```
 
 ## Try it out!
