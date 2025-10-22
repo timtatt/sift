@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/lithammer/fuzzysearch/fuzzy"
 	"github.com/timtatt/sift/internal/tests"
 	"github.com/timtatt/sift/pkg/viewbuilder"
 )
@@ -92,12 +91,8 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 			m.testState[test.Ref] = ts
 		}
 
-		searchQuery := m.searchInput.Value()
-		if searchQuery != "" {
-			normalizedQuery := normalizeSearchQuery(searchQuery)
-			if !fuzzy.MatchFold(normalizedQuery, test.Ref.Test) {
-				continue
-			}
+		if !m.isTestVisible(test) {
+			continue
 		}
 
 		testHighlighted := m.cursor.test == i

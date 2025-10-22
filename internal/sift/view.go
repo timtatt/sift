@@ -92,13 +92,7 @@ func normalizeSearchQuery(query string) string {
 	return strings.ReplaceAll(query, " ", "")
 }
 
-// isTestVisible checks if a test passes the current search filter
-func (m *siftModel) isTestVisible(testIndex int) bool {
-	test := m.testManager.GetTest(testIndex)
-	if test == nil {
-		return false
-	}
-
+func (m *siftModel) isTestVisible(test *tests.TestNode) bool {
 	searchQuery := m.searchInput.Value()
 	if searchQuery != "" {
 		normalizedQuery := normalizeSearchQuery(searchQuery)
@@ -110,17 +104,27 @@ func (m *siftModel) isTestVisible(testIndex int) bool {
 	return true
 }
 
+// isTestVisible checks if a test passes the current search filter
+func (m *siftModel) isTestVisibleByIndex(testIndex int) bool {
+	test := m.testManager.GetTest(testIndex)
+	if test == nil {
+		return false
+	}
+
+	return m.isTestVisible(test)
+}
+
 // ensureCursorVisible ensures the cursor is on a visible test
 // If the current test is hidden, moves to the nearest visible test
 func (m *siftModel) ensureCursorVisible() {
 	// If current test is visible, we're good
-	if m.isTestVisible(m.cursor.test) {
+	if m.isTestVisibleByIndex(m.cursor.test) {
 		return
 	}
 
 	// Try to find the next visible test
 	for i := m.cursor.test + 1; i < m.testManager.GetTestCount(); i++ {
-		if m.isTestVisible(i) {
+		if m.isTestVisibleByIndex(i) {
 			m.cursor.test = i
 			m.cursor.log = 0
 			return
@@ -129,7 +133,7 @@ func (m *siftModel) ensureCursorVisible() {
 
 	// If no test found forward, try backward
 	for i := m.cursor.test - 1; i >= 0; i-- {
-		if m.isTestVisible(i) {
+		if m.isTestVisibleByIndex(i) {
 			m.cursor.test = i
 			m.cursor.log = 0
 			return
@@ -148,7 +152,7 @@ func (m *siftModel) PrevTest() {
 
 	// Find the previous visible test
 	for i := m.cursor.test - 1; i >= 0; i-- {
-		if !m.isTestVisible(i) {
+		if !m.isTestVisibleByIndex(i) {
 			continue
 		}
 
@@ -180,7 +184,7 @@ func (m *siftModel) NextTest() {
 
 	// Find the next visible test
 	for i := m.cursor.test + 1; i < m.testManager.GetTestCount(); i++ {
-		if !m.isTestVisible(i) {
+		if !m.isTestVisibleByIndex(i) {
 			continue
 		}
 
@@ -205,7 +209,7 @@ func (m *siftModel) PrevFailingTest() {
 
 	// Find the previous visible failing test
 	for i := m.cursor.test - 1; i >= 0; i-- {
-		if !m.isTestVisible(i) {
+		if !m.isTestVisibleByIndex(i) {
 			continue
 		}
 
@@ -235,7 +239,7 @@ func (m *siftModel) NextFailingTest() {
 
 	// Find the next visible failing test
 	for i := m.cursor.test + 1; i < m.testManager.GetTestCount(); i++ {
-		if !m.isTestVisible(i) {
+		if !m.isTestVisibleByIndex(i) {
 			continue
 		}
 
@@ -281,7 +285,7 @@ func (m *siftModel) CursorDown() {
 
 	// go to the next visible test
 	for i := m.cursor.test + 1; i < m.testManager.GetTestCount(); i++ {
-		if !m.isTestVisible(i) {
+		if !m.isTestVisibleByIndex(i) {
 			continue
 		}
 
@@ -335,7 +339,7 @@ func (m *siftModel) CursorUp() {
 
 	// go to the previous visible test
 	for i := m.cursor.test - 1; i >= 0; i-- {
-		if !m.isTestVisible(i) {
+		if !m.isTestVisibleByIndex(i) {
 			continue
 		}
 

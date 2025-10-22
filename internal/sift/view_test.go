@@ -971,7 +971,7 @@ func TestIsTestVisible_SpaceHandling(t *testing.T) {
 
 			m.searchInput.SetValue(tt.searchQuery)
 
-			got := m.isTestVisible(0)
+			got := m.isTestVisibleByIndex(0)
 			assert.Equal(t, tt.want, got)
 		})
 	}
