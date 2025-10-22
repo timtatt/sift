@@ -97,6 +97,7 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 	summary := tests.NewSummary()
 
 	stack := newTestStack()
+	var lastPackage string
 
 	for i, test := range m.testManager.GetTests {
 
@@ -108,6 +109,15 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 
 		if !m.isTestVisible(test) {
 			continue
+		}
+
+		if test.Ref.Package != lastPackage {
+			if lastPackage != "" {
+				vb.AddLine()
+			}
+			vb.Add(styleSecondary.Render(test.Ref.Package))
+			vb.AddLine()
+			lastPackage = test.Ref.Package
 		}
 
 		testHighlighted := m.cursor.test == i

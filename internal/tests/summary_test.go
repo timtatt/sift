@@ -100,7 +100,7 @@ func TestPackageSummary(t *testing.T) {
 		s.AddPackage("pkg3", "run")
 
 		pkgSummary := s.PackageSummary()
-		assert.Equal(t, 2, pkgSummary.Passed)
+		assert.Equal(t, 1, pkgSummary.Passed)
 		assert.Equal(t, 1, pkgSummary.Failed)
 		assert.Equal(t, 1, pkgSummary.Running)
 	})

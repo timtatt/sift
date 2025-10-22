@@ -17,9 +17,19 @@ func (m *siftModel) inlineView() string {
 	summary := tests.NewSummary()
 
 	stack := newTestStack()
+	var lastPackage string
 
 	for _, test := range m.testManager.GetTests {
 		summary.AddPackage(test.Ref.Package, test.Status)
+
+		if test.Ref.Package != lastPackage {
+			if lastPackage != "" {
+				vb.AddLine()
+			}
+			vb.Add(styleSecondary.Render(test.Ref.Package))
+			vb.AddLine()
+			lastPackage = test.Ref.Package
+		}
 
 		var statusIcon string
 		switch test.Status {
