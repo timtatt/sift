@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"cmp"
 	"slices"
 	"strings"
 	"sync"
@@ -40,6 +41,13 @@ type TestNode struct {
 	Ref     TestReference
 	Elapsed time.Duration
 	Status  string // pass, fail, run
+}
+
+func CompareTestNode(a, b *TestNode) int {
+	if c := cmp.Compare(a.Ref.Package, b.Ref.Package); c != 0 {
+		return c
+	}
+	return cmp.Compare(a.Ref.Test, b.Ref.Test)
 }
 
 // Filters out redundant Go test output lines like "=== RUN" and "--- PASS/FAIL/SKIP"
@@ -104,10 +112,20 @@ func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
 		tm.testLock.Lock()
 		defer tm.testLock.Unlock()
 
-		tm.tests = append(tm.tests, &TestNode{
+		newTest := &TestNode{
 			Ref:    testRef,
 			Status: "run",
-		})
+		}
+
+		insertIdx := len(tm.tests)
+		for i, t := range tm.tests {
+			if CompareTestNode(newTest, t) < 0 {
+				insertIdx = i
+				break
+			}
+		}
+
+		tm.tests = slices.Insert(tm.tests, insertIdx, newTest)
 	case "pass", "fail", "skip":
 		tm.testLock.Lock()
 		defer tm.testLock.Unlock()
