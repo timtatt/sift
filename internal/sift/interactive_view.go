@@ -3,6 +3,7 @@ package sift
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/timtatt/sift/internal/tests"
@@ -78,6 +79,18 @@ func (m *siftModel) statusView(summary *tests.Summary) string {
 	return styleOutcomePass.Render("PASSED")
 }
 
+func formatDuration(d time.Duration) string {
+	if d.Milliseconds() < 1000 {
+		return fmt.Sprintf("%dms", d.Milliseconds())
+	} else if d.Seconds() < 60 {
+		return fmt.Sprintf("%.0fs", d.Seconds())
+	} else {
+		minutes := int(d.Minutes())
+		seconds := int(d.Seconds()) % 60
+		return fmt.Sprintf("%dm%ds", minutes, seconds)
+	}
+}
+
 func (m *siftModel) testView() (string, *tests.Summary) {
 	vb := viewbuilder.New()
 
@@ -121,7 +134,7 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 		elapsed := ""
 		if test.Status != "run" {
 			elapsed = styleSecondary.Render(
-				fmt.Sprintf("(%.2fs)", test.Elapsed.Seconds()),
+				formatDuration(test.Elapsed),
 			)
 		}
 
