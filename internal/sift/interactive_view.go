@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/lithammer/fuzzysearch/fuzzy"
 	"github.com/timtatt/sift/internal/tests"
 	"github.com/timtatt/sift/pkg/viewbuilder"
 )
@@ -92,8 +91,7 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 			m.testState[test.Ref] = ts
 		}
 
-		searchQuery := m.searchInput.Value()
-		if searchQuery != "" && !fuzzy.MatchFold(searchQuery, test.Ref.Test) {
+		if !m.isTestVisible(test) {
 			continue
 		}
 
