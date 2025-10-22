@@ -22,7 +22,7 @@ func (ts *testStack) Len() int {
 }
 
 func (ts *testStack) Push(testName string) {
-	if len(ts.stack) == ts.lastElement-1 {
+	if len(ts.stack) == ts.lastElement+1 {
 		ts.stack = append(ts.stack, testName)
 	} else {
 		ts.stack[ts.lastElement+1] = testName
