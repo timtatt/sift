@@ -96,6 +96,8 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 
 	summary := tests.NewSummary()
 
+	stack := newTestStack()
+
 	for i, test := range m.testManager.GetTests {
 
 		ts, ok := m.testState[test.Ref]
@@ -123,9 +125,11 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 			statusIcon = styleTick.Render("\u2713")
 		}
 
-		indentLevel := getIndentLevel(test.Ref.Test)
+		prefixTest := stack.PopUntilPrefix(test.Ref.Test)
+		testName, _ := strings.CutPrefix(test.Ref.Test, prefixTest)
+
+		indentLevel := stack.Len()
 		indent := getIndentWithLines(indentLevel)
-		testName := getDisplayName(test.Ref.Test)
 
 		if testHighlighted {
 			testName = styleHighlighted.Render(testName)
@@ -173,6 +177,8 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 				vb.AddLine()
 			}
 		}
+
+		stack.Push(test.Ref.Test)
 	}
 
 	return vb.String(), summary

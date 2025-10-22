@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"time"
 
@@ -66,7 +67,30 @@ type SiftOptions struct {
 	PrettifyLogs   bool
 }
 
+func initLogging() error {
+	// TODO: change the file
+
+	logFile, err := os.OpenFile("/tmp/sift.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+
+	if err != nil {
+		return fmt.Errorf("failed to open log file: %w", err)
+	}
+
+	handler := slog.New(slog.NewTextHandler(logFile, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
+	slog.SetDefault(handler)
+
+	return nil
+}
+
 func Run(ctx context.Context, opts SiftOptions) error {
+
+	if opts.Debug {
+		if err := initLogging(); err != nil {
+			return err
+		}
+		slog.DebugContext(ctx, "starting sift", "options", opts)
+	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
