@@ -1,11 +1,11 @@
 package sift
 
-func getStatusIcon(status string) string {
+func (m *siftModel) getStatusIcon(status string) string {
 	switch status {
 	case "skip":
 		return styleSkip.Render("\u23ED")
 	case "run":
-		return styleProgress.Render("\u2022")
+		return styleProgress.Render(m.runningSpinner.View())
 	case "fail":
 		return styleCross.Render("\u00D7")
 	case "pass":

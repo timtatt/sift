@@ -48,8 +48,9 @@ type siftModel struct {
 
 	windowSize tea.WindowSizeMsg
 
-	searchInput textinput.Model
-	spinner     spinner.Model
+	searchInput    textinput.Model
+	compileSpinner spinner.Model
+	runningSpinner spinner.Model
 
 	mode viewMode
 }
@@ -78,7 +79,8 @@ func NewSiftModel(opts SiftOptions) *siftModel {
 		}),
 		testState:      make(map[tests.TestReference]*testState),
 		autoToggleMode: false,
-		spinner:        spinner.New(spinner.WithSpinner(spinner.Dot)),
+		compileSpinner: spinner.New(spinner.WithSpinner(spinner.Dot)),
+		runningSpinner: spinner.New(spinner.WithSpinner(CenterDotPulse)),
 		help:           helpview.New(),
 		cursor: &cursor{
 			test: 0,
@@ -371,7 +373,7 @@ func (m *siftModel) CursorUp() {
 func (m *siftModel) Init() tea.Cmd {
 	// initialise key ring buffer with size 2
 	m.keyBuffer = make([]string, 2)
-	return m.spinner.Tick
+	return tea.Batch(m.runningSpinner.Tick, m.compileSpinner.Tick)
 }
 
 func (m *siftModel) LastKeysMatch(binding key.Binding) bool {
@@ -615,7 +617,10 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	if m.mode == viewModeAlternate {
-		m.spinner, cmd = m.spinner.Update(msg)
+		m.compileSpinner, cmd = m.compileSpinner.Update(msg)
+		cmds = append(cmds, cmd)
+
+		m.runningSpinner, cmd = m.runningSpinner.Update(msg)
 		cmds = append(cmds, cmd)
 
 		m.viewport, cmd = m.viewport.Update(msg)
