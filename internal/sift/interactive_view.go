@@ -137,26 +137,17 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 
 		testHighlighted := m.cursor.test == i
 
-		var statusIcon string
-		summary.AddPackage(test.Ref.Package, test.Status)
-		switch test.Status {
-		case "skip":
-			statusIcon = styleSkip.Render("\u23ED")
-		case "run":
-			statusIcon = styleProgress.Render("\u2022")
-		case "fail":
-			statusIcon = styleCross.Render("\u00D7")
-		case "pass":
-			statusIcon = styleTick.Render("\u2713")
-		}
+		summary.AddToPackage(test.Ref.Package, test.Status)
+
+		statusIcon := getStatusIcon(test.Status)
 
 		prefixTest := stack.PopUntilPrefix(test.Ref.Test)
 		testName, _ := strings.CutPrefix(test.Ref.Test, prefixTest)
 
-		indentLevel := stack.Len()
-		indent := getIndentWithLines(indentLevel)
+		indent := getIndentWithBars(stack.Len())
 
 		if test.Ref.Test != "" {
+
 			if testHighlighted {
 				testName = styleHighlighted.Render(testName)
 			}
@@ -223,7 +214,7 @@ func getDisplayName(testName string) string {
 	return testName[lastSlash+1:]
 }
 
-func getIndentWithLines(indentLevel int) string {
+func getIndentWithBars(indentLevel int) string {
 	if indentLevel == 0 {
 		return ""
 	}

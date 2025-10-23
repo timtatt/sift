@@ -18,7 +18,7 @@ func NewSummary() *Summary {
 	}
 }
 
-func (s *Summary) AddPackage(pkg string, status string) {
+func (s *Summary) AddToPackage(pkg string, status string) {
 	ps, ok := s.packages[pkg]
 	if !ok {
 		ps = TestSummary{}

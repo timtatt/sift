@@ -20,44 +20,53 @@ func (m *siftModel) inlineView() string {
 	var lastPackage string
 
 	for _, test := range m.testManager.GetTests {
-		summary.AddPackage(test.Ref.Package, test.Status)
+		summary.AddToPackage(test.Ref.Package, test.Status)
 
 		if test.Ref.Package != lastPackage {
 			if lastPackage != "" {
 				vb.AddLine()
 			}
-			vb.Add(styleSecondary.Render(test.Ref.Package))
+
+			style := styleSecondary
+			prefix := ""
+
+			if test.Ref.Test == "" {
+				style = style.Foreground(colorMutedRed)
+				prefix = style.Foreground(colorRed).Render("! ")
+			}
+
+			vb.Add(prefix + style.Render(test.Ref.Package))
 			vb.AddLine()
 			lastPackage = test.Ref.Package
 		}
 
-		var statusIcon string
-		switch test.Status {
-		case "skip":
-			statusIcon = styleSkip.Render("\u23ED")
-		case "run":
-			statusIcon = styleProgress.Render("\u2022")
-		case "fail":
-			statusIcon = styleCross.Render("\u00D7")
-		case "pass":
-			statusIcon = styleTick.Render("\u2713")
+		if test.Ref.Test != "" {
+			statusIcon := getStatusIcon(test.Status)
+
+			prefixTest := stack.PopUntilPrefix(test.Ref.Test)
+			testName, _ := strings.CutPrefix(test.Ref.Test, prefixTest)
+
+			indentLevel := stack.Len()
+			indent := getIndentWithBars(indentLevel)
+
+			elapsed := ""
+			if test.Status != "run" {
+				elapsed = styleSecondary.Render(
+					formatDuration(test.Elapsed),
+				)
+			}
+
+			vb.Add(fmt.Sprintf("%s%s %s %s", indent, statusIcon, testName, elapsed))
+			vb.AddLine()
+		} else {
+			for _, logEntry := range m.testManager.GetLogs(test.Ref) {
+
+				prettifiedLog := prettifyLogEntry(logEntry, styleLog)
+				vb.Add(fmt.Sprintf("%s", prettifiedLog))
+				vb.AddLine()
+			}
+
 		}
-
-		prefixTest := stack.PopUntilPrefix(test.Ref.Test)
-		testName, _ := strings.CutPrefix(test.Ref.Test, prefixTest)
-
-		indentLevel := stack.Len()
-		indent := getIndentWithLines(indentLevel)
-
-		elapsed := ""
-		if test.Status != "run" {
-			elapsed = styleSecondary.Render(
-				formatDuration(test.Elapsed),
-			)
-		}
-
-		vb.Add(fmt.Sprintf("%s%s %s %s", indent, statusIcon, testName, elapsed))
-		vb.AddLine()
 
 		stack.Push(test.Ref.Test)
 	}

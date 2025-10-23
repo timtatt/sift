@@ -57,7 +57,8 @@ func shouldSkipLogLine(line string) bool {
 	return strings.HasPrefix(trimmed, "=== RUN") ||
 		strings.HasPrefix(trimmed, "--- PASS:") ||
 		strings.HasPrefix(trimmed, "--- FAIL:") ||
-		strings.HasPrefix(trimmed, "--- SKIP:")
+		strings.HasPrefix(trimmed, "--- SKIP:") ||
+		strings.HasSuffix(trimmed, "[build failed]")
 }
 
 // JSON output from `go test -json`

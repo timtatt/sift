@@ -57,7 +57,7 @@ func TestAddPackage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := NewSummary()
-			s.AddPackage("pkg1", tt.status)
+			s.AddToPackage("pkg1", tt.status)
 
 			total := s.Total()
 			assert.Equal(t, tt.wantPass, total.Passed)
@@ -68,10 +68,10 @@ func TestAddPackage(t *testing.T) {
 
 	t.Run("multiple statuses", func(t *testing.T) {
 		s := NewSummary()
-		s.AddPackage("pkg1", "pass")
-		s.AddPackage("pkg2", "fail")
-		s.AddPackage("pkg3", "run")
-		s.AddPackage("pkg4", "pass")
+		s.AddToPackage("pkg1", "pass")
+		s.AddToPackage("pkg2", "fail")
+		s.AddToPackage("pkg3", "run")
+		s.AddToPackage("pkg4", "pass")
 
 		total := s.Total()
 		assert.Equal(t, 2, total.Passed)
@@ -81,9 +81,9 @@ func TestAddPackage(t *testing.T) {
 
 	t.Run("same package multiple times", func(t *testing.T) {
 		s := NewSummary()
-		s.AddPackage("pkg1", "pass")
-		s.AddPackage("pkg1", "pass")
-		s.AddPackage("pkg1", "fail")
+		s.AddToPackage("pkg1", "pass")
+		s.AddToPackage("pkg1", "pass")
+		s.AddToPackage("pkg1", "fail")
 
 		total := s.Total()
 		assert.Equal(t, 2, total.Passed)
@@ -94,10 +94,10 @@ func TestAddPackage(t *testing.T) {
 func TestPackageSummary(t *testing.T) {
 	t.Run("aggregates package data", func(t *testing.T) {
 		s := NewSummary()
-		s.AddPackage("pkg1", "pass")
-		s.AddPackage("pkg1", "pass")
-		s.AddPackage("pkg2", "fail")
-		s.AddPackage("pkg3", "run")
+		s.AddToPackage("pkg1", "pass")
+		s.AddToPackage("pkg1", "pass")
+		s.AddToPackage("pkg2", "fail")
+		s.AddToPackage("pkg3", "run")
 
 		pkgSummary := s.PackageSummary()
 		assert.Equal(t, 1, pkgSummary.Passed)
@@ -116,10 +116,10 @@ func TestPackageSummary(t *testing.T) {
 
 	t.Run("matches total", func(t *testing.T) {
 		s := NewSummary()
-		s.AddPackage("pkg1", "pass")
-		s.AddPackage("pkg2", "pass")
-		s.AddPackage("pkg3", "fail")
-		s.AddPackage("pkg4", "run")
+		s.AddToPackage("pkg1", "pass")
+		s.AddToPackage("pkg2", "pass")
+		s.AddToPackage("pkg3", "fail")
+		s.AddToPackage("pkg4", "run")
 
 		total := s.Total()
 		pkgSummary := s.PackageSummary()
@@ -133,13 +133,13 @@ func TestPackageSummary(t *testing.T) {
 func TestSummary_ComplexScenarios(t *testing.T) {
 	t.Run("lifecycle progression", func(t *testing.T) {
 		s := NewSummary()
-		s.AddPackage("pkg1", "run")
-		s.AddPackage("pkg1", "pass")
-		s.AddPackage("pkg2", "run")
-		s.AddPackage("pkg2", "fail")
-		s.AddPackage("pkg3", "run")
-		s.AddPackage("pkg3", "pass")
-		s.AddPackage("pkg4", "run")
+		s.AddToPackage("pkg1", "run")
+		s.AddToPackage("pkg1", "pass")
+		s.AddToPackage("pkg2", "run")
+		s.AddToPackage("pkg2", "fail")
+		s.AddToPackage("pkg3", "run")
+		s.AddToPackage("pkg3", "pass")
+		s.AddToPackage("pkg4", "run")
 
 		total := s.Total()
 		assert.Equal(t, 2, total.Passed)
@@ -162,7 +162,7 @@ func TestSummary_ComplexScenarios(t *testing.T) {
 		}
 
 		for _, p := range packages {
-			s.AddPackage(p.name, p.status)
+			s.AddToPackage(p.name, p.status)
 		}
 
 		total := s.Total()
