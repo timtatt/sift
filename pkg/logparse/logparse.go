@@ -3,15 +3,37 @@ package logparse
 import (
 	"encoding/json"
 	"io"
+	"strconv"
 	"strings"
 	"time"
 )
 
 type LogEntry struct {
-	Time       time.Time      `json:"time"`
-	Level      string         `json:"level"`
-	Message    string         `json:"msg"`
-	Additional map[string]any `json:"-"`
+	Time       time.Time                `json:"time"`
+	Level      string                   `json:"level"`
+	Message    string                   `json:"msg"`
+	Additional []LogEntryAdditionalProp `json:"-"`
+}
+
+type LogEntryAdditionalProp struct {
+	Key   string
+	Value string
+}
+
+func Stringify(v any) (string, bool) {
+	switch val := v.(type) {
+	case string:
+		return val, true
+	case float64:
+		return strconv.FormatFloat(val, 'f', -1, 64), true
+	case int:
+		return strconv.Itoa(val), true
+	case bool:
+		return strconv.FormatBool(val), true
+	default:
+		return "", false
+	}
+
 }
 
 // TODO: remove this once json/v2 is GA
@@ -37,7 +59,15 @@ func (se *LogEntry) UnmarshalJSON(data []byte) error {
 	delete(rawMap, "level")
 	delete(rawMap, "msg")
 
-	se.Additional = rawMap
+	for key, value := range rawMap {
+		v, ok := Stringify(value)
+		if ok {
+			se.Additional = append(se.Additional, LogEntryAdditionalProp{
+				Key:   key,
+				Value: v,
+			})
+		}
+	}
 
 	return nil
 }
