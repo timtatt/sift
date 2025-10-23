@@ -160,7 +160,9 @@ func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
 		if testIdx > -1 {
 			test := tm.tests[testIdx]
 
-			test.Status = testOutput.Action
+			if test.Status != "error" {
+				test.Status = testOutput.Action
+			}
 			test.Elapsed = time.Duration(float64(time.Second) * testOutput.Elapsed)
 		}
 	}
