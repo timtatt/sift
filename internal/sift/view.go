@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -47,7 +48,9 @@ type siftModel struct {
 
 	windowSize tea.WindowSizeMsg
 
-	searchInput textinput.Model
+	searchInput    textinput.Model
+	compileSpinner spinner.Model
+	runningSpinner spinner.Model
 
 	mode viewMode
 }
@@ -76,6 +79,8 @@ func NewSiftModel(opts SiftOptions) *siftModel {
 		}),
 		testState:      make(map[tests.TestReference]*testState),
 		autoToggleMode: false,
+		compileSpinner: spinner.New(spinner.WithSpinner(spinner.Dot)),
+		runningSpinner: spinner.New(spinner.WithSpinner(CenterDotPulse)),
 		help:           helpview.New(),
 		cursor: &cursor{
 			test: 0,
@@ -368,7 +373,7 @@ func (m *siftModel) CursorUp() {
 func (m *siftModel) Init() tea.Cmd {
 	// initialise key ring buffer with size 2
 	m.keyBuffer = make([]string, 2)
-	return nil
+	return tea.Batch(m.runningSpinner.Tick, m.compileSpinner.Tick)
 }
 
 func (m *siftModel) LastKeysMatch(binding key.Binding) bool {
@@ -612,6 +617,12 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	if m.mode == viewModeAlternate {
+		m.compileSpinner, cmd = m.compileSpinner.Update(msg)
+		cmds = append(cmds, cmd)
+
+		m.runningSpinner, cmd = m.runningSpinner.Update(msg)
+		cmds = append(cmds, cmd)
+
 		m.viewport, cmd = m.viewport.Update(msg)
 		cmds = append(cmds, cmd)
 	}

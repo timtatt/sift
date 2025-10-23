@@ -1,6 +1,9 @@
 package sift
 
 import (
+	"time"
+
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -71,4 +74,16 @@ var (
 	styleOutcome     = lipgloss.NewStyle().PaddingLeft(1).PaddingRight(1)
 	styleOutcomePass = styleOutcome.Background(colorGreen)
 	styleOutcomeFail = styleOutcome.Background(colorRed)
+
+	CenterDotPulse = spinner.Spinner{
+		Frames: []string{
+			lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#808080", Dark: "#4D4D4D"}).Render("∙"),
+			lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#A65D30", Dark: "#806040"}).Render("∙"),
+			lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#C97009", Dark: "#B38030"}).Render("∙"),
+			lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#D97009", Dark: "#FFAF00"}).Render("∙"),
+			lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#C97009", Dark: "#B38030"}).Render("∙"),
+			lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#A65D30", Dark: "#806040"}).Render("∙"),
+		},
+		FPS: time.Second / 10,
+	}
 )

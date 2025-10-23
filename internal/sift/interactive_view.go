@@ -34,7 +34,7 @@ func (m *siftModel) interactiveView() string {
 	s += header
 
 	if !m.started {
-		s += "Waiting for test results..."
+		s += m.compileSpinner.View() + "Compiling"
 	}
 
 	if m.started {
@@ -139,7 +139,7 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 
 		summary.AddToPackage(test.Ref.Package, test.Status)
 
-		statusIcon := getStatusIcon(test.Status)
+		statusIcon := m.getStatusIcon(test.Status)
 
 		prefixTest := stack.PopUntilPrefix(test.Ref.Test)
 		testName, _ := strings.CutPrefix(test.Ref.Test, prefixTest)

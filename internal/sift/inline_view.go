@@ -41,7 +41,7 @@ func (m *siftModel) inlineView() string {
 		}
 
 		if test.Ref.Test != "" {
-			statusIcon := getStatusIcon(test.Status)
+			statusIcon := m.getStatusIcon(test.Status)
 
 			prefixTest := stack.PopUntilPrefix(test.Ref.Test)
 			testName, _ := strings.CutPrefix(test.Ref.Test, prefixTest)
