@@ -6,12 +6,12 @@ sift is a lightweight terminal UI for displaying Go test results. It allows deve
 
 ## Screenshot
 
-<img width="60%" alt="screenshot" src="https://github.com/user-attachments/assets/604c9bf1-d0a2-4e3a-a34d-eb87c7e93a42" />
+<img width="60%" alt="screenshot" src="https://github.com/user-attachments/assets/06ff106e-2525-4130-8827-3dfd05a4c232" />
 
 ## Installation
 
 ```bash
-go install github.com/timtatt/sift@v0.10.0
+go install github.com/timtatt/sift@v0.11.0
 ```
 
 ## Try it out!
@@ -37,7 +37,7 @@ go test {your-go-package} -v -json | sift
 go test ./... -v -json | sift
 ```
 
-## Demo
+## Demo (v0.9.0)
 
 <video width="60%" src="https://github.com/user-attachments/assets/44b23d46-739b-4956-8894-25ed6d7ae5e9"></video>
 
