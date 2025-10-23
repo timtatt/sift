@@ -387,10 +387,10 @@ func TestBuildErrorHandling(t *testing.T) {
 	tm := NewTestManager(TestManagerOpts{ParseLogs: false})
 
 	tm.AddTestOutput(TestOutputLine{
-		Action:  "build-output",
-		Package: "github.com/example/pkg",
-		Output:  "# github.com/example/pkg\n",
-		Time:    time.Now(),
+		Action:     "build-output",
+		ImportPath: "github.com/example/pkg",
+		Output:     "# github.com/example/pkg\n",
+		Time:       time.Now(),
 	})
 	tm.AddTestOutput(TestOutputLine{
 		Action:  "build-output",
@@ -409,13 +409,12 @@ func TestBuildErrorHandling(t *testing.T) {
 	require.NotNil(t, test)
 	assert.Equal(t, "github.com/example/pkg", test.Ref.Package)
 	assert.Equal(t, "", test.Ref.Test)
-	assert.Equal(t, "fail", test.Status)
+	assert.Equal(t, "error", test.Status)
 
 	buildErrRef := TestReference{Package: "github.com/example/pkg", Test: ""}
-	assert.Equal(t, 2, tm.GetLogCount(buildErrRef))
+	assert.Equal(t, 1, tm.GetLogCount(buildErrRef))
 
 	logs := tm.GetLogs(buildErrRef)
-	require.Len(t, logs, 2)
-	assert.Equal(t, "# github.com/example/pkg", logs[0].Message)
-	assert.Equal(t, "pkg/file.go:10:5: undefined: someFunction", logs[1].Message)
+	require.Len(t, logs, 1)
+	assert.Equal(t, "pkg/file.go:10:5: undefined: someFunction", logs[0].Message)
 }
