@@ -20,6 +20,8 @@ func (m *siftModel) interactiveView() string {
 		header += styleSecondary.Render(" [AUTO TOGGLE MODE]")
 	}
 
+	header += " " + lipgloss.NewStyle().Foreground(colorMutedBlue).Render(Version)
+
 	if m.opts.Debug {
 		header += fmt.Sprintf(" cursor: [%d, %d] %d | yoffset: %d, bottom %d", m.cursor.test, m.cursor.log, m.GetCursorPos(), m.viewport.YOffset, m.viewport.YOffset+m.viewport.Height)
 
