@@ -61,22 +61,28 @@ func shouldSkipLogLine(line string) bool {
 
 // JSON output from `go test -json`
 type TestOutputLine struct {
-	Time    time.Time `json:"time"`
-	Action  string    `json:"action"`
-	Package string    `json:"package"`
-	Test    string    `json:"test,omitempty"`
-	Elapsed float64   `json:"elapsed,omitempty"`
-	Output  string    `json:"output,omitempty"`
+	Time       time.Time `json:"Time"`
+	Action     string    `json:"Action"`
+	Package    string    `json:"Package"`
+	ImportPath string    `json:"ImportPath,omitempty"`
+	Test       string    `json:"Test,omitempty"`
+	Elapsed    float64   `json:"Elapsed,omitempty"`
+	Output     string    `json:"output,omitempty"`
 }
 
 func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
+	pkg := testOutput.Package
+	if pkg == "" && testOutput.ImportPath != "" {
+		pkg = testOutput.ImportPath
+	}
+
 	testRef := TestReference{
-		Package: testOutput.Package,
+		Package: pkg,
 		Test:    testOutput.Test,
 	}
 
 	switch testOutput.Action {
-	case "output":
+	case "output", "build-output":
 		log := strings.TrimRight(testOutput.Output, "\n")
 
 		var logEntry logparse.LogEntry
@@ -107,6 +113,17 @@ func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
 		} else {
 			tm.testLogs[testRef] = []logparse.LogEntry{logEntry}
 		}
+
+	case "build-fail":
+		tm.testLock.Lock()
+		defer tm.testLock.Unlock()
+
+		newTest := &TestNode{
+			Ref:    testRef,
+			Status: "error",
+		}
+
+		tm.tests = slices.Insert(tm.tests, 0, newTest)
 
 	case "run":
 		tm.testLock.Lock()
