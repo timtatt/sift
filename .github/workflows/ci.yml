@@ -42,14 +42,14 @@ jobs:
         run: |
           VERSION=$(go run . --version)
           
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists, skipping release"
+          if git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "Tag $VERSION already exists, skipping release"
           else
-            echo "Creating new tag and release for $TAG"
+            echo "Creating new tag and release for $VERSION"
             git config user.name github-actions
             git config user.email github-actions@github.com
-            git tag "$TAG"
-            git push origin "$TAG"
+            git tag "$VERSION"
+            git push origin "$VERSION"
           fi
         env:
           GITHUB_TOKEN: ${{ github.token }}
