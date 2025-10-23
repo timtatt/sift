@@ -15,10 +15,8 @@ func prettifyLogEntry(entry logparse.LogEntry, baseStyle lipgloss.Style) string 
 		Render(entry.Time.Format(time.TimeOnly + ".000"))
 
 	additionalFields := ""
-	for key, value := range entry.Additional {
-		if v, ok := value.(string); ok {
-			additionalFields += fmt.Sprintf("%s=%s ", key, v)
-		}
+	for _, field := range entry.Additional {
+		additionalFields += fmt.Sprintf("%s=%s ", field.Key, field.Value)
 	}
 	if additionalFields != "" {
 		additionalFields = styleSecondary.Inherit(baseStyle).Render(" | " + additionalFields[:len(additionalFields)-1])

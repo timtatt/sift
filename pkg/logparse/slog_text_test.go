@@ -51,19 +51,19 @@ func TestParseSlogText(t *testing.T) {
 
 func TestParseSlogText_Examples(t *testing.T) {
 	tests := []struct {
-		name           string
-		log            string
-		expectedMsg    string
-		expectedLevel  string
-		expectedFields map[string]any
+		name               string
+		log                string
+		expectedMsg        string
+		expectedLevel      string
+		expectedAdditional []LogEntryAdditionalProp
 	}{
 		{
 			name:          "info message with string field",
 			log:           `time=2025-10-05T09:52:58.046+11:00 level=INFO msg="This is an info message" key1=value1`,
 			expectedMsg:   "This is an info message",
 			expectedLevel: "INFO",
-			expectedFields: map[string]any{
-				"key1": "value1",
+			expectedAdditional: []LogEntryAdditionalProp{
+				{Key: "key1", Value: "value1"},
 			},
 		},
 		{
@@ -71,8 +71,8 @@ func TestParseSlogText_Examples(t *testing.T) {
 			log:           `time=2025-10-05T09:52:58.046+11:00 level=DEBUG msg="This is a debug message" key3=42`,
 			expectedMsg:   "This is a debug message",
 			expectedLevel: "DEBUG",
-			expectedFields: map[string]any{
-				"key3": "42",
+			expectedAdditional: []LogEntryAdditionalProp{
+				{Key: "key3", Value: "42"},
 			},
 		},
 		{
@@ -80,8 +80,8 @@ func TestParseSlogText_Examples(t *testing.T) {
 			log:           `time=2025-10-05T09:52:58.046+11:00 level=WARN msg="This is a warning message" key4=3.14`,
 			expectedMsg:   "This is a warning message",
 			expectedLevel: "WARN",
-			expectedFields: map[string]any{
-				"key4": "3.14",
+			expectedAdditional: []LogEntryAdditionalProp{
+				{Key: "key4", Value: "3.14"},
 			},
 		},
 	}
@@ -94,11 +94,7 @@ func TestParseSlogText_Examples(t *testing.T) {
 			assert.Equal(t, tt.expectedMsg, entry.Message)
 			assert.Equal(t, tt.expectedLevel, entry.Level)
 			assert.False(t, entry.Time.IsZero(), "Time should not be zero")
-
-			for key, expectedValue := range tt.expectedFields {
-				assert.Contains(t, entry.Additional, key)
-				assert.Equal(t, expectedValue, entry.Additional[key])
-			}
+			assert.ElementsMatch(t, tt.expectedAdditional, entry.Additional)
 		})
 	}
 }

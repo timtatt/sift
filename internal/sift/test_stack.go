@@ -1,7 +1,6 @@
 package sift
 
 import (
-	"log/slog"
 	"strings"
 )
 
@@ -33,7 +32,6 @@ func (ts *testStack) Push(testName string) {
 func (ts *testStack) PopUntilPrefix(testName string) string {
 	for ts.lastElement > -1 {
 		if strings.HasPrefix(testName, ts.stack[ts.lastElement]+"/") {
-			slog.Debug("popUntilPrefix", "testName", testName, "stack", ts.stack[:ts.lastElement+1])
 			return ts.stack[ts.lastElement] + "/"
 		}
 		ts.stack[ts.lastElement] = ""

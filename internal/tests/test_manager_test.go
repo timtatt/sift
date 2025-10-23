@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/timtatt/sift/pkg/logparse"
 )
 
 func TestShouldSkipLogLine(t *testing.T) {
@@ -211,7 +212,7 @@ func TestAddTestOutput(t *testing.T) {
 		assert.Equal(t, "INFO", logs[0].Level)
 		assert.Equal(t, "2025-10-05T09:52:58+11:00", logs[0].Time.Format(time.RFC3339))
 		assert.Equal(t, "This is an info message", logs[0].Message)
-		assert.Equal(t, "value1", logs[0].Additional["key1"])
+		assert.Contains(t, logs[0].Additional, logparse.LogEntryAdditionalProp{Key: "key1", Value: "value1"})
 	})
 }
 

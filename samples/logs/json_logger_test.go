@@ -44,3 +44,30 @@ func TestStandardSlog(t *testing.T) {
 func TestRawLogging(t *testing.T) {
 	fmt.Println("This is a raw log message")
 }
+
+func TestSlogWith20Attributes(t *testing.T) {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+
+	logger.Info("Log entry with 20 attributes",
+		slog.String("attr1", "value1"),
+		slog.String("attr2", "value2"),
+		slog.Int("attr3", 3),
+		slog.Int("attr4", 4),
+		slog.Float64("attr5", 5.5),
+		slog.Float64("attr6", 6.6),
+		slog.Bool("attr7", true),
+		slog.Bool("attr8", false),
+		slog.String("attr9", "value9"),
+		slog.String("attr10", "value10"),
+		slog.Int("attr11", 11),
+		slog.Int("attr12", 12),
+		slog.Float64("attr13", 13.13),
+		slog.Float64("attr14", 14.14),
+		slog.String("attr15", "value15"),
+		slog.String("attr16", "value16"),
+		slog.Int("attr17", 17),
+		slog.Int("attr18", 18),
+		slog.String("attr19", "value19"),
+		slog.String("attr20", "value20"),
+	)
+}

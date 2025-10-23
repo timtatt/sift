@@ -17,7 +17,7 @@ func ParseSlogText(reader io.Reader) (LogEntry, error) {
 	}
 
 	entry := LogEntry{
-		Additional: make(map[string]any),
+		Additional: []LogEntryAdditionalProp{},
 	}
 
 	for _, item := range items {
@@ -32,7 +32,10 @@ func ParseSlogText(reader io.Reader) (LogEntry, error) {
 		case "msg":
 			entry.Message = item.value
 		default:
-			entry.Additional[item.key] = item.value
+			entry.Additional = append(entry.Additional, LogEntryAdditionalProp{
+				Key:   item.key,
+				Value: item.value,
+			})
 		}
 	}
 
