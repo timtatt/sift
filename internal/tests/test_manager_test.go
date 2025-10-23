@@ -382,3 +382,39 @@ func TestGetLogs(t *testing.T) {
 		assert.Nil(t, tm.GetLogs(nonExistentRef))
 	})
 }
+
+func TestBuildErrorHandling(t *testing.T) {
+	tm := NewTestManager(TestManagerOpts{ParseLogs: false})
+
+	tm.AddTestOutput(TestOutputLine{
+		Action:     "build-output",
+		ImportPath: "github.com/example/pkg",
+		Output:     "# github.com/example/pkg\n",
+		Time:       time.Now(),
+	})
+	tm.AddTestOutput(TestOutputLine{
+		Action:  "build-output",
+		Package: "github.com/example/pkg",
+		Output:  "pkg/file.go:10:5: undefined: someFunction\n",
+		Time:    time.Now(),
+	})
+	tm.AddTestOutput(TestOutputLine{
+		Action:  "build-fail",
+		Package: "github.com/example/pkg",
+	})
+
+	assert.Equal(t, 1, tm.GetTestCount())
+
+	test := tm.GetTest(0)
+	require.NotNil(t, test)
+	assert.Equal(t, "github.com/example/pkg", test.Ref.Package)
+	assert.Equal(t, "", test.Ref.Test)
+	assert.Equal(t, "error", test.Status)
+
+	buildErrRef := TestReference{Package: "github.com/example/pkg", Test: ""}
+	assert.Equal(t, 1, tm.GetLogCount(buildErrRef))
+
+	logs := tm.GetLogs(buildErrRef)
+	require.Len(t, logs, 1)
+	assert.Equal(t, "pkg/file.go:10:5: undefined: someFunction", logs[0].Message)
+}

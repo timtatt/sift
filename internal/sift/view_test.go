@@ -141,7 +141,7 @@ func TestGetIndentWithLines(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := getIndentWithLines(tt.indentLevel)
+			got := getIndentWithBars(tt.indentLevel)
 
 			if tt.wantEmpty {
 				assert.Empty(t, got)

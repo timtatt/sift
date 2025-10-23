@@ -2,6 +2,7 @@ package tests
 
 import (
 	"cmp"
+	"fmt"
 	"slices"
 	"strings"
 	"sync"
@@ -56,28 +57,40 @@ func shouldSkipLogLine(line string) bool {
 	return strings.HasPrefix(trimmed, "=== RUN") ||
 		strings.HasPrefix(trimmed, "--- PASS:") ||
 		strings.HasPrefix(trimmed, "--- FAIL:") ||
-		strings.HasPrefix(trimmed, "--- SKIP:")
+		strings.HasPrefix(trimmed, "--- SKIP:") ||
+		strings.HasSuffix(trimmed, "[build failed]")
 }
 
 // JSON output from `go test -json`
 type TestOutputLine struct {
-	Time    time.Time `json:"time"`
-	Action  string    `json:"action"`
-	Package string    `json:"package"`
-	Test    string    `json:"test,omitempty"`
-	Elapsed float64   `json:"elapsed,omitempty"`
-	Output  string    `json:"output,omitempty"`
+	Time       time.Time `json:"Time"`
+	Action     string    `json:"Action"`
+	Package    string    `json:"Package"`
+	ImportPath string    `json:"ImportPath,omitempty"`
+	Test       string    `json:"Test,omitempty"`
+	Elapsed    float64   `json:"Elapsed,omitempty"`
+	Output     string    `json:"output,omitempty"`
 }
 
 func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
+	pkg := testOutput.Package
+	if pkg == "" && testOutput.ImportPath != "" {
+		pkg = testOutput.ImportPath
+	}
+
 	testRef := TestReference{
-		Package: testOutput.Package,
+		Package: pkg,
 		Test:    testOutput.Test,
 	}
 
 	switch testOutput.Action {
-	case "output":
+	case "output", "build-output":
 		log := strings.TrimRight(testOutput.Output, "\n")
+
+		// don't include the log of a package with build failure
+		if log == fmt.Sprintf("# %s", testRef.Package) {
+			return
+		}
 
 		var logEntry logparse.LogEntry
 		if tm.opts.ParseLogs {
@@ -90,7 +103,7 @@ func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
 
 		// provide a time if one isn't present in the log entry
 		if logEntry.Time.IsZero() {
-			logEntry.Time = testOutput.Time
+			logEntry.Time = time.Now()
 		}
 
 		if shouldSkipLogLine(log) {
@@ -107,6 +120,17 @@ func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
 		} else {
 			tm.testLogs[testRef] = []logparse.LogEntry{logEntry}
 		}
+
+	case "build-fail":
+		tm.testLock.Lock()
+		defer tm.testLock.Unlock()
+
+		newTest := &TestNode{
+			Ref:    testRef,
+			Status: "error",
+		}
+
+		tm.tests = slices.Insert(tm.tests, 0, newTest)
 
 	case "run":
 		tm.testLock.Lock()
@@ -136,7 +160,9 @@ func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
 		if testIdx > -1 {
 			test := tm.tests[testIdx]
 
-			test.Status = testOutput.Action
+			if test.Status != "error" {
+				test.Status = testOutput.Action
+			}
 			test.Elapsed = time.Duration(float64(time.Second) * testOutput.Elapsed)
 		}
 	}

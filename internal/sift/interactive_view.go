@@ -107,6 +107,11 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 			m.testState[test.Ref] = ts
 		}
 
+		// if the pkg has a build failure, always show it
+		if test.Ref.Test == "" {
+			ts.toggled = true
+		}
+
 		if !m.isTestVisible(test) {
 			continue
 		}
@@ -115,50 +120,53 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 			if lastPackage != "" {
 				vb.AddLine()
 			}
-			vb.Add(styleSecondary.Render(test.Ref.Package))
+
+			style := styleSecondary
+			prefix := ""
+
+			// if the pkg had a build error, highlight it in red
+			if test.Ref.Test == "" {
+				style = style.Foreground(colorMutedRed)
+				prefix = style.Foreground(colorRed).Render("! ")
+			}
+
+			vb.Add(prefix + style.Render(test.Ref.Package))
 			vb.AddLine()
 			lastPackage = test.Ref.Package
 		}
 
 		testHighlighted := m.cursor.test == i
 
-		var statusIcon string
-		summary.AddPackage(test.Ref.Package, test.Status)
-		switch test.Status {
-		case "skip":
-			statusIcon = styleSkip.Render("\u23ED")
-		case "run":
-			statusIcon = styleProgress.Render("\u2022")
-		case "fail":
-			statusIcon = styleCross.Render("\u00D7")
-		case "pass":
-			statusIcon = styleTick.Render("\u2713")
-		}
+		summary.AddToPackage(test.Ref.Package, test.Status)
+
+		statusIcon := getStatusIcon(test.Status)
 
 		prefixTest := stack.PopUntilPrefix(test.Ref.Test)
 		testName, _ := strings.CutPrefix(test.Ref.Test, prefixTest)
 
-		indentLevel := stack.Len()
-		indent := getIndentWithLines(indentLevel)
+		indent := getIndentWithBars(stack.Len())
 
-		if testHighlighted {
-			testName = styleHighlighted.Render(testName)
+		if test.Ref.Test != "" {
+
+			if testHighlighted {
+				testName = styleHighlighted.Render(testName)
+			}
+
+			elapsed := ""
+			if test.Status != "run" {
+				elapsed = styleSecondary.Render(
+					formatDuration(test.Elapsed),
+				)
+			}
+
+			ts.viewportPos = vb.Lines()
+
+			vb.Add(fmt.Sprintf("%s%s %s %s", indent, statusIcon, testName, elapsed))
+			if m.opts.Debug {
+				vb.Add(fmt.Sprintf(" [%d]", ts.viewportPos))
+			}
+			vb.AddLine()
 		}
-
-		elapsed := ""
-		if test.Status != "run" {
-			elapsed = styleSecondary.Render(
-				formatDuration(test.Elapsed),
-			)
-		}
-
-		ts.viewportPos = vb.Lines()
-
-		vb.Add(fmt.Sprintf("%s%s %s %s", indent, statusIcon, testName, elapsed))
-		if m.opts.Debug {
-			vb.Add(fmt.Sprintf(" [%d]", ts.viewportPos))
-		}
-		vb.AddLine()
 
 		if ts.toggled {
 			logs := m.testManager.GetLogs(test.Ref)
@@ -206,7 +214,7 @@ func getDisplayName(testName string) string {
 	return testName[lastSlash+1:]
 }
 
-func getIndentWithLines(indentLevel int) string {
+func getIndentWithBars(indentLevel int) string {
 	if indentLevel == 0 {
 		return ""
 	}

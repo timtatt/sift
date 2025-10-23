@@ -8,8 +8,8 @@ type TestSummary struct {
 }
 
 type Summary struct {
-	packages map[string]TestSummary
-	total    TestSummary
+	packages  map[string]TestSummary
+	testTotal TestSummary
 }
 
 func NewSummary() *Summary {
@@ -18,32 +18,36 @@ func NewSummary() *Summary {
 	}
 }
 
-func (s *Summary) AddPackage(pkg string, status string) {
-	ps, ok := s.packages[pkg]
+func (s *Summary) AddToPackage(pkg string, status string) {
+	pkgSummary, ok := s.packages[pkg]
 	if !ok {
-		ps = TestSummary{}
+		pkgSummary = TestSummary{}
 	}
 
 	switch status {
+	case "error":
+		// only increment the failed pkgs count
+		// don't increment the total failed tests count
+		pkgSummary.Failed++
 	case "pass":
-		s.total.Passed++
-		ps.Passed++
+		s.testTotal.Passed++
+		pkgSummary.Passed++
 	case "fail":
-		s.total.Failed++
-		ps.Failed++
+		s.testTotal.Failed++
+		pkgSummary.Failed++
 	case "skip":
-		s.total.Skipped++
-		ps.Skipped++
+		s.testTotal.Skipped++
+		pkgSummary.Skipped++
 	case "run":
-		s.total.Running++
-		ps.Running++
+		s.testTotal.Running++
+		pkgSummary.Running++
 	}
 
-	s.packages[pkg] = ps
+	s.packages[pkg] = pkgSummary
 }
 
 func (s *Summary) Total() TestSummary {
-	return s.total
+	return s.testTotal
 }
 
 func (s *Summary) PackageSummary() TestSummary {

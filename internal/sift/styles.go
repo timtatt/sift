@@ -59,7 +59,7 @@ var (
 	styleSecondary   = lipgloss.NewStyle().Foreground(colorGrey)
 	styleHighlighted = lipgloss.NewStyle().Background(colorHighlight)
 
-	styleLog = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.AdaptiveColor{
+	styleLog = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{
 		Light: "#4A4A4A",
 		Dark:  "#B2B2B2",
 	})
