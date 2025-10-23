@@ -107,6 +107,11 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 			m.testState[test.Ref] = ts
 		}
 
+		// if the pkg has a build failure, always show it
+		if test.Ref.Test == "" {
+			ts.toggled = true
+		}
+
 		if !m.isTestVisible(test) {
 			continue
 		}
@@ -115,7 +120,17 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 			if lastPackage != "" {
 				vb.AddLine()
 			}
-			vb.Add(styleSecondary.Render(test.Ref.Package))
+
+			style := styleSecondary
+			prefix := ""
+
+			// if the pkg had a build error, highlight it in red
+			if test.Ref.Test == "" {
+				style = style.Foreground(colorMutedRed)
+				prefix = style.Foreground(colorRed).Render("! ")
+			}
+
+			vb.Add(prefix + style.Render(test.Ref.Package))
 			vb.AddLine()
 			lastPackage = test.Ref.Package
 		}
@@ -141,24 +156,26 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 		indentLevel := stack.Len()
 		indent := getIndentWithLines(indentLevel)
 
-		if testHighlighted {
-			testName = styleHighlighted.Render(testName)
-		}
+		if test.Ref.Test != "" {
+			if testHighlighted {
+				testName = styleHighlighted.Render(testName)
+			}
 
-		elapsed := ""
-		if test.Status != "run" {
-			elapsed = styleSecondary.Render(
-				formatDuration(test.Elapsed),
-			)
-		}
+			elapsed := ""
+			if test.Status != "run" {
+				elapsed = styleSecondary.Render(
+					formatDuration(test.Elapsed),
+				)
+			}
 
-		ts.viewportPos = vb.Lines()
+			ts.viewportPos = vb.Lines()
 
-		vb.Add(fmt.Sprintf("%s%s %s %s", indent, statusIcon, testName, elapsed))
-		if m.opts.Debug {
-			vb.Add(fmt.Sprintf(" [%d]", ts.viewportPos))
+			vb.Add(fmt.Sprintf("%s%s %s %s", indent, statusIcon, testName, elapsed))
+			if m.opts.Debug {
+				vb.Add(fmt.Sprintf(" [%d]", ts.viewportPos))
+			}
+			vb.AddLine()
 		}
-		vb.AddLine()
 
 		if ts.toggled {
 			logs := m.testManager.GetLogs(test.Ref)

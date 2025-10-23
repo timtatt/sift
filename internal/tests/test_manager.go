@@ -2,6 +2,7 @@ package tests
 
 import (
 	"cmp"
+	"fmt"
 	"slices"
 	"strings"
 	"sync"
@@ -85,6 +86,11 @@ func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
 	case "output", "build-output":
 		log := strings.TrimRight(testOutput.Output, "\n")
 
+		// don't include the log of a package with build failure
+		if log == fmt.Sprintf("# %s", testRef.Package) {
+			return
+		}
+
 		var logEntry logparse.LogEntry
 		if tm.opts.ParseLogs {
 			logEntry = logparse.ParseLog(log)
@@ -96,7 +102,7 @@ func (tm *TestManager) AddTestOutput(testOutput TestOutputLine) {
 
 		// provide a time if one isn't present in the log entry
 		if logEntry.Time.IsZero() {
-			logEntry.Time = testOutput.Time
+			logEntry.Time = time.Now()
 		}
 
 		if shouldSkipLogLine(log) {
