@@ -34,7 +34,7 @@ func (m *siftModel) interactiveView() string {
 	s += header
 
 	if !m.started {
-		s += "Waiting for test results..."
+		s += m.spinner.View() + "Compiling"
 	}
 
 	if m.started {

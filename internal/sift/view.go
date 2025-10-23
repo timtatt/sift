@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -48,6 +49,7 @@ type siftModel struct {
 	windowSize tea.WindowSizeMsg
 
 	searchInput textinput.Model
+	spinner     spinner.Model
 
 	mode viewMode
 }
@@ -76,6 +78,7 @@ func NewSiftModel(opts SiftOptions) *siftModel {
 		}),
 		testState:      make(map[tests.TestReference]*testState),
 		autoToggleMode: false,
+		spinner:        spinner.New(spinner.WithSpinner(spinner.Dot)),
 		help:           helpview.New(),
 		cursor: &cursor{
 			test: 0,
@@ -368,7 +371,7 @@ func (m *siftModel) CursorUp() {
 func (m *siftModel) Init() tea.Cmd {
 	// initialise key ring buffer with size 2
 	m.keyBuffer = make([]string, 2)
-	return nil
+	return m.spinner.Tick
 }
 
 func (m *siftModel) LastKeysMatch(binding key.Binding) bool {
@@ -612,6 +615,9 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	if m.mode == viewModeAlternate {
+		m.spinner, cmd = m.spinner.Update(msg)
+		cmds = append(cmds, cmd)
+
 		m.viewport, cmd = m.viewport.Update(msg)
 		cmds = append(cmds, cmd)
 	}
