@@ -51,6 +51,11 @@ func (s *TestSuite) TestExample() {
 	time.Sleep(time.Second * 1)
 }
 
+func (s *TestSuite) TestPanic() {
+	log.Println("this test is about to panic")
+	panic("something went terribly wrong")
+}
+
 func TestTestSuite(t *testing.T) {
 	suite.Run(t, new(TestSuite))
 }
