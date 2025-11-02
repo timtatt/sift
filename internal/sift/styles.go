@@ -29,7 +29,7 @@ var (
 		Dark:  "#D27E5D",
 	}
 	colorBlue = lipgloss.AdaptiveColor{
-		Light: "#004080",
+		Light: "#4A90E2",
 		Dark:  "#005FFF",
 	}
 	colorMutedBlue = lipgloss.AdaptiveColor{
@@ -37,7 +37,7 @@ var (
 		Dark:  "#5B9BD5",
 	}
 	colorHighlight = lipgloss.AdaptiveColor{
-		Light: "#E0E8F0",
+		Light: "#B2D1F0",
 		Dark:  "#2B57A3",
 	}
 	colorGrey = lipgloss.AdaptiveColor{
@@ -67,7 +67,15 @@ var (
 		Dark:  "#B2B2B2",
 	})
 
-	styleHeader = lipgloss.NewStyle().Background(colorBlue).Bold(true).PaddingLeft(1).PaddingRight(1)
+	styleHeader = lipgloss.NewStyle().
+			Foreground(lipgloss.AdaptiveColor{
+			Light: "#FFFFFF",
+			Dark:  "#FFFFFF",
+		}).
+		Background(colorBlue).
+		Bold(true).
+		PaddingLeft(1).
+		PaddingRight(1)
 
 	styleBody = lipgloss.NewStyle().Padding(1)
 
