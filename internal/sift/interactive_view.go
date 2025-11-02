@@ -192,6 +192,12 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 
 				vb.Add(indent + styledLog)
 				vb.AddLine()
+
+				// hack to stop rendering logs if we're outside the viewport
+				// this doesn't handle logs above the viewport, but it's a start
+				if vb.Lines() > m.viewport.YOffset+m.viewport.Height {
+					break
+				}
 			}
 		}
 
