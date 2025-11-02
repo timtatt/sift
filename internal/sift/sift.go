@@ -140,5 +140,12 @@ func Run(ctx context.Context, opts SiftOptions) error {
 		return nil
 	})
 
-	return g.Wait()
+	err := g.Wait()
+	if err != nil {
+		return err
+	}
+
+	m.quitting = false
+	fmt.Print(m.View())
+	return nil
 }
