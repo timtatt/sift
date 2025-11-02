@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/timtatt/sift/internal/tests"
+	"github.com/timtatt/sift/pkg/logparse"
 	"github.com/timtatt/sift/pkg/viewbuilder"
 )
 
@@ -175,25 +176,21 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 
 			for logIdx, log := range logs {
 
-				logStyle := lipgloss.NewStyle()
-				prefix := "  "
-				if testHighlighted && logIdx == m.cursor.log {
-					prefix = "> "
-					logStyle = lipgloss.NewStyle().Bold(true)
-				} else if !testHighlighted {
-					logStyle = styleSecondary
+				styledLog := m.renderLog(logIdx, log, testHighlighted)
+
+				// recalculate log height for viewport
+				// TODO: move this outside the render function
+				if len(ts.logHeights) <= logIdx || ts.logHeights[logIdx] == 0 {
+					logHeight := lipgloss.Height(styledLog)
+
+					if len(ts.logHeights) <= logIdx {
+						ts.logHeights = append(ts.logHeights, logHeight)
+					} else {
+						ts.logHeights[logIdx] = logHeight
+					}
 				}
 
-				var styledLog string
-				if m.opts.PrettifyLogs {
-					styledLog = prettifyLogEntry(log, logStyle)
-				} else {
-					styledLog = logStyle.Render(log.Message)
-				}
-
-				styledLog = styleLog.Width(m.viewport.Width - 2).Render(styledLog)
-
-				vb.Add(indent + prefix + styledLog)
+				vb.Add(indent + styledLog)
 				vb.AddLine()
 			}
 		}
@@ -202,6 +199,30 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 	}
 
 	return vb.String(), summary
+}
+
+func (m *siftModel) renderLog(logIdx int, log logparse.LogEntry, testHighlighted bool) string {
+	selectedLog := testHighlighted && logIdx == m.cursor.log
+
+	logStyle := lipgloss.NewStyle()
+	prefix := "  "
+	if selectedLog {
+		prefix = "> "
+		logStyle = lipgloss.NewStyle().Bold(true)
+	} else {
+		logStyle = styleSecondary
+	}
+
+	var styledLog string
+	if m.opts.PrettifyLogs {
+		styledLog = prettifyLogEntry(log, logStyle)
+	} else {
+		styledLog = logStyle.Render(log.Message)
+	}
+
+	styledLog = prefix + styleLog.Width(m.viewport.Width-2).Render(styledLog)
+
+	return styledLog
 }
 
 func getIndentLevel(testName string) int {

@@ -17,6 +17,10 @@ import (
 type testState struct {
 	toggled     bool
 	viewportPos int
+
+	// this is used to keep track of the height of wrapped logs
+	// it helps in calculating the viewport content height without rendering everything
+	logHeights []int
 }
 
 type viewMode int
@@ -321,7 +325,11 @@ func (m *siftModel) GetCursorPos() int {
 		return -1
 	}
 
-	pos := ts.viewportPos + m.cursor.log
+	pos := ts.viewportPos
+
+	for logIdx := range m.cursor.log {
+		pos += ts.logHeights[logIdx]
+	}
 
 	if ts.toggled {
 		// if the test is toggled it has 1 extra line
