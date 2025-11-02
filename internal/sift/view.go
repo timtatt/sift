@@ -41,6 +41,7 @@ type siftModel struct {
 
 	ready     bool
 	started   bool
+	quitting  bool
 	viewport  viewport.Model
 	keyBuffer []string
 
@@ -420,8 +421,11 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.startTime = time.Now()
 	}
 
-	if m.mode == viewModeInline && !m.endTime.IsZero() {
+	if m.quitting {
 		return m, tea.Quit
+	} else if m.mode == viewModeInline && !m.endTime.IsZero() {
+		m.quitting = true
+		return m, nil
 	}
 
 	switch msg := msg.(type) {
@@ -577,7 +581,8 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.ExitAltScreen
 			}
 			if !m.endTime.IsZero() {
-				return m, tea.Quit
+				m.quitting = true
+				return m, nil
 			}
 		case key.Matches(msg, keys.ClearSearch):
 			// Clear search filter when esc is pressed and not in search mode
@@ -631,6 +636,12 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *siftModel) View() string {
+	// this is a hack to allow the final output of the inline view to include all lines
+	// the proper way to handle this would be to have a custom renderer for tea which doesn't truncate the lines based on the viewport
+	if m.quitting {
+		return ""
+	}
+
 	if m.mode == viewModeInline {
 		return m.inlineView()
 	}
