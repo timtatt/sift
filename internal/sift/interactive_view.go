@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/timtatt/sift/internal/tests"
 	"github.com/timtatt/sift/pkg/logparse"
-	"github.com/timtatt/sift/pkg/viewbuilder"
+	"github.com/timtatt/sift/pkg/vviewport"
 )
 
 func (m *siftModel) interactiveView() string {
@@ -41,9 +41,9 @@ func (m *siftModel) interactiveView() string {
 	}
 
 	if m.started {
-		testView, summary := m.testView()
+		testViewBuilder, summary := m.testView()
 
-		m.viewport.SetContent(testView)
+		m.viewport.SetContent(testViewBuilder)
 
 		var footer string
 		footer += "\n"
@@ -57,7 +57,9 @@ func (m *siftModel) interactiveView() string {
 		footer += "\n"
 		footer += lipgloss.NewStyle().PaddingTop(1).Render(m.help.View(keys))
 
-		testViewHeight := lipgloss.Height(testView)
+		// TODO: fix this, the viewport height shouldn't change before it is rendered
+		// calculate viewport height
+		testViewHeight := testViewBuilder.Lines()
 		maxTestViewHeight := m.windowSize.Height - lipgloss.Height(footer) - lipgloss.Height(header)
 		m.viewport.Height = min(testViewHeight, maxTestViewHeight)
 
@@ -94,8 +96,8 @@ func formatDuration(d time.Duration) string {
 	}
 }
 
-func (m *siftModel) testView() (string, *tests.Summary) {
-	vb := viewbuilder.New()
+func (m *siftModel) testView() (*vviewport.ContentBuilder, *tests.Summary) {
+	vb := m.viewport.NewContentBuilder()
 
 	summary := tests.NewSummary()
 
@@ -134,7 +136,6 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 			}
 
 			vb.Add(prefix + style.Render(test.Ref.Package))
-			vb.AddLine()
 			lastPackage = test.Ref.Package
 		}
 
@@ -164,11 +165,11 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 
 			ts.viewportPos = vb.Lines()
 
-			vb.Add(fmt.Sprintf("%s%s %s %s", indent, statusIcon, testName, elapsed))
+			s := fmt.Sprintf("%s%s %s %s", indent, statusIcon, testName, elapsed)
 			if m.opts.Debug {
-				vb.Add(fmt.Sprintf(" [%d]", ts.viewportPos))
+				s += fmt.Sprintf(" [%d]", ts.viewportPos)
 			}
-			vb.AddLine()
+			vb.Add(s)
 		}
 
 		if ts.toggled {
@@ -191,7 +192,6 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 				}
 
 				vb.Add(indent + styledLog)
-				vb.AddLine()
 
 				// hack to stop rendering logs if we're outside the viewport
 				// this doesn't handle logs above the viewport, but it's a start
@@ -205,7 +205,7 @@ func (m *siftModel) testView() (string, *tests.Summary) {
 		stack.Push(test.Ref.Test)
 	}
 
-	return vb.String(), summary
+	return vb, summary
 }
 
 func (m *siftModel) renderLog(logIdx int, log logparse.LogEntry, testHighlighted bool) string {

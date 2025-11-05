@@ -2,11 +2,11 @@ package sift
 
 import (
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/viewport"
+	"github.com/timtatt/sift/pkg/vviewport"
 )
 
 type keyMap struct {
-	viewport               viewport.KeyMap
+	viewport               vviewport.KeyMap
 	Up                     key.Binding
 	Down                   key.Binding
 	PrevTest               key.Binding
@@ -44,7 +44,7 @@ func (k keyMap) FullHelp() [][]key.Binding {
 
 var (
 	keys = keyMap{
-		viewport: viewport.KeyMap{
+		viewport: vviewport.KeyMap{
 			Down: key.NewBinding(
 				key.WithKeys("ctrl+e"),
 				key.WithHelp("ctrl+e", "scroll down"),

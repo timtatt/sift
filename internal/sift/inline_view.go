@@ -36,7 +36,6 @@ func (m *siftModel) inlineView() string {
 			}
 
 			vb.Add(prefix + style.Render(test.Ref.Package))
-			vb.AddLine()
 			lastPackage = test.Ref.Package
 		}
 
@@ -57,13 +56,11 @@ func (m *siftModel) inlineView() string {
 			}
 
 			vb.Add(fmt.Sprintf("%s%s %s %s", indent, statusIcon, testName, elapsed))
-			vb.AddLine()
 		} else {
 			for _, logEntry := range m.testManager.GetLogs(test.Ref) {
 
 				prettifiedLog := prettifyLogEntry(logEntry, styleLog)
-				vb.Add(fmt.Sprintf("%s", prettifiedLog))
-				vb.AddLine()
+				vb.Add(prettifiedLog)
 			}
 
 		}
@@ -76,14 +73,12 @@ func (m *siftModel) inlineView() string {
 
 	if !m.endTime.IsZero() {
 		vb.AddLine()
-		vb.AddLine()
 		total := summary.Total()
 		if total.Failed > 0 {
 			vb.Add(styleOutcomeFail.Render("FAILED"))
 		} else {
 			vb.Add(styleOutcomePass.Render("PASSED"))
 		}
-		vb.AddLine()
 	}
 
 	return vb.String()

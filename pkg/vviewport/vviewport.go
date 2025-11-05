@@ -51,8 +51,7 @@ type Model struct {
 	Style lipgloss.Style
 
 	initialized      bool
-	content          []string
-	contentLength    int
+	content          *ContentBuilder
 	longestLineWidth int
 }
 
@@ -87,12 +86,12 @@ func (m Model) PastBottom() bool {
 
 // ScrollPercent returns the amount scrolled as a float between 0 and 1.
 func (m Model) ScrollPercent() float64 {
-	if m.Height >= m.contentLength {
+	if m.Height >= m.content.Lines() {
 		return 1.0
 	}
 	y := float64(m.YOffset)
 	h := float64(m.Height)
-	t := float64(m.contentLength)
+	t := float64(m.content.Lines())
 	v := y / (t - h)
 	return math.Max(0.0, math.Min(1.0, v))
 }
@@ -110,16 +109,25 @@ func (m Model) HorizontalScrollPercent() float64 {
 	return math.Max(0.0, math.Min(1.0, v))
 }
 
+func (m *Model) NewContentBuilder() *ContentBuilder {
+	return &ContentBuilder{
+		height:  m.Height,
+		yOffset: m.YOffset,
+	}
+}
+
 // SetContent set the pager's text content.
-func (m *Model) SetContent(content string, contentLength int) {
-	content = strings.ReplaceAll(content, "\r\n", "\n") // normalize line endings
-	m.content = strings.Split(content, "\n")
-	m.contentLength = contentLength
+func (m *Model) SetContent(c *ContentBuilder) {
+
+	// TODO: move this to content builder
+	// content := strings.ReplaceAll(c.String(), "\r\n", "\n") // normalize line endings
+
+	m.content = c
 
 	// TODO: do we need this?
-	m.longestLineWidth = findLongestLineWidth(m.content)
+	m.longestLineWidth = findLongestLineWidth(m.content.Content())
 
-	if m.YOffset > m.contentLength-1 {
+	if m.YOffset > m.content.Lines()-1 {
 		m.GotoBottom()
 	}
 }
@@ -127,13 +135,13 @@ func (m *Model) SetContent(content string, contentLength int) {
 // maxYOffset returns the maximum possible value of the y-offset based on the
 // viewport's content and set height.
 func (m Model) maxYOffset() int {
-	return max(0, m.contentLength-m.Height+m.Style.GetVerticalFrameSize())
+	return max(0, m.content.Lines()-m.Height+m.Style.GetVerticalFrameSize())
 }
 
 // visibleLines returns the lines that should currently be visible in the
 // viewport.
 func (m Model) visibleLines() []string {
-	return m.content
+	return m.content.Content()
 }
 
 // SetYOffset sets the Y offset.
@@ -179,7 +187,7 @@ func (m *Model) HalfPageUp() {
 
 // ScrollDown moves the view down by the given number of lines.
 func (m *Model) ScrollDown(n int) {
-	if m.AtBottom() || n == 0 || m.contentLength == 0 {
+	if m.AtBottom() || n == 0 || m.content.Lines() == 0 {
 		return
 	}
 
@@ -192,7 +200,7 @@ func (m *Model) ScrollDown(n int) {
 // ScrollUp moves the view down by the given number of lines. Returns the new
 // lines to show.
 func (m *Model) ScrollUp(n int) {
-	if m.AtTop() || n == 0 || m.contentLength == 0 {
+	if m.AtTop() || n == 0 || m.content.Lines() == 0 {
 		return
 	}
 
@@ -228,7 +236,7 @@ func (m *Model) ScrollRight(n int) {
 
 // TotalLineCount returns the total number of lines (both hidden and visible) within the viewport.
 func (m Model) TotalLineCount() int {
-	return m.contentLength
+	return m.content.Lines()
 }
 
 // VisibleLineCount returns the number of the visible lines within the viewport.

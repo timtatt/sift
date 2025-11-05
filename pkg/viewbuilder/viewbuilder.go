@@ -17,12 +17,11 @@ func (vb *ViewBuilder) Add(s string) {
 		}
 	}
 
-	vb.view += s
+	vb.view += s + "\n"
 }
 
 func (vb *ViewBuilder) AddLine() {
-	vb.lines += 1
-	vb.view += "\n"
+	vb.AddLines(1)
 }
 
 func (vb *ViewBuilder) AddLines(n int) {
@@ -31,7 +30,7 @@ func (vb *ViewBuilder) AddLines(n int) {
 	}
 
 	vb.lines += n
-	for _ = range n {
+	for range n {
 		vb.view += "\n"
 	}
 }
