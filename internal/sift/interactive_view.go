@@ -177,7 +177,7 @@ func (m *siftModel) testView() (*vviewport.ContentBuilder, *tests.Summary) {
 
 			for logIdx, log := range logs {
 
-				styledLog := m.renderLog(logIdx, log, testHighlighted)
+				styledLog := m.renderLog(logIdx, log, testHighlighted, indent)
 
 				// recalculate log height for viewport
 				// TODO: move this outside the render function
@@ -191,7 +191,7 @@ func (m *siftModel) testView() (*vviewport.ContentBuilder, *tests.Summary) {
 					}
 				}
 
-				vb.Add(indent + styledLog)
+				vb.Add(styledLog)
 
 				// hack to stop rendering logs if we're outside the viewport
 				// this doesn't handle logs above the viewport, but it's a start
@@ -208,7 +208,7 @@ func (m *siftModel) testView() (*vviewport.ContentBuilder, *tests.Summary) {
 	return vb, summary
 }
 
-func (m *siftModel) renderLog(logIdx int, log logparse.LogEntry, testHighlighted bool) string {
+func (m *siftModel) renderLog(logIdx int, log logparse.LogEntry, testHighlighted bool, indent string) string {
 	selectedLog := testHighlighted && logIdx == m.cursor.log
 
 	logStyle := lipgloss.NewStyle()
@@ -227,9 +227,11 @@ func (m *siftModel) renderLog(logIdx int, log logparse.LogEntry, testHighlighted
 		styledLog = logStyle.Render(log.Message)
 	}
 
-	styledLog = prefix + styleLog.Width(m.viewport.Width-2).Render(styledLog)
+	styledLog = indent + prefix + styleLog.Render(styledLog)
 
-	return styledLog
+	wrapLog := lipgloss.NewStyle().Width(m.viewport.Width).Render(styledLog)
+
+	return wrapLog
 }
 
 func getIndentLevel(testName string) int {

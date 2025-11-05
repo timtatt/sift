@@ -14,4 +14,13 @@ func TestLargeLogs(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("nested long test", func(t *testing.T) {
+		t.Run("child long test", func(t *testing.T) {
+			for i := range 2000 {
+				extra := strings.Repeat("ab ", 80)
+				t.Logf("This is log message number %d - %s", i+1, extra)
+			}
+		})
+	})
 }
