@@ -103,16 +103,8 @@ func Run(ctx context.Context, opts SiftOptions) error {
 		slog.DebugContext(ctx, "starting sift", "options", opts)
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer cancel()
-
-	// Set up signal handling for graceful shutdown
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-sigChan
-		cancel()
-	}()
 
 	fps := 120
 
