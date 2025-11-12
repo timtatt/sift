@@ -22,8 +22,8 @@ type sift struct {
 	model   *siftModel
 }
 
-// isStdinTerminal checks if stdin is a terminal (no piped input)
-func isStdinTerminal() bool {
+// IsStdinTerminal checks if stdin is a terminal (no piped input)
+func IsStdinTerminal() bool {
 	stat, err := os.Stdin.Stat()
 	if err != nil {
 		return false
@@ -101,11 +101,6 @@ func Run(ctx context.Context, opts SiftOptions) error {
 			return err
 		}
 		slog.DebugContext(ctx, "starting sift", "options", opts)
-	}
-
-	// Check if stdin is a terminal (no piped input)
-	if isStdinTerminal() {
-		return errors.New("no input provided. pipe test results to sift:\n  go test ./... -v -json | sift")
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
