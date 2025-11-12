@@ -411,6 +411,13 @@ const (
 )
 
 func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		if msg.String() == "ctrl+c"{
+			m.quitting = true
+			return m, nil
+		}
+	}
 	var (
 		cmd  tea.Cmd
 		cmds []tea.Cmd
@@ -445,6 +452,11 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.KeyMsg:
 		if m.mode == viewModeInline {
+			return m, nil
+		}
+
+		if msg.String() == "ctrl+c"{
+			m.quitting = true
 			return m, nil
 		}
 
