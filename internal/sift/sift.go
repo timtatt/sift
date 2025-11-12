@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -18,6 +20,15 @@ import (
 type sift struct {
 	program *tea.Program
 	model   *siftModel
+}
+
+// isStdinTerminal checks if stdin is a terminal (no piped input)
+func isStdinTerminal() bool {
+	stat, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	return (stat.Mode() & os.ModeCharDevice) != 0
 }
 
 func (s *sift) ScanStdin() error {
@@ -92,8 +103,21 @@ func Run(ctx context.Context, opts SiftOptions) error {
 		slog.DebugContext(ctx, "starting sift", "options", opts)
 	}
 
+	// Check if stdin is a terminal (no piped input)
+	if isStdinTerminal() {
+		return errors.New("no input provided. pipe test results to sift:\n  go test ./... -v -json | sift")
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+
+	// Set up signal handling for graceful shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigChan
+		cancel()
+	}()
 
 	fps := 120
 
