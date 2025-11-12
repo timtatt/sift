@@ -452,6 +452,9 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if m.searchInput.Focused() {
 			switch {
+			case msg.String() == "ctrl+c":
+				m.quitting = true
+				return m, tea.Quit
 			case msg.String() == "esc":
 				// Exit search mode and clear query
 				m.searchInput.Blur()
@@ -575,6 +578,9 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case key.Matches(msg, keys.Help):
 			m.help.ShowAll = !m.help.ShowAll
+		case key.Matches(msg, keys.ForceQuit):
+			m.quitting = true
+			return m, tea.Quit
 		case key.Matches(msg, keys.Quit):
 			if m.mode == viewModeAlternate {
 				m.mode = viewModeInline
