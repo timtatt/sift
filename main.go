@@ -22,5 +22,6 @@ func main() {
 	}
 
 	err := ctx.Run()
+
 	ctx.FatalIfErrorf(err)
 }

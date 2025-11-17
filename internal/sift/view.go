@@ -579,8 +579,11 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.Help):
 			m.help.ShowAll = !m.help.ShowAll
 		case key.Matches(msg, keys.ForceQuit):
+			// ensure running inline mode for the final print
+			m.mode = viewModeInline
 			m.quitting = true
-			return m, tea.Quit
+
+			return m, nil
 		case key.Matches(msg, keys.Quit):
 			if m.mode == viewModeAlternate {
 				m.mode = viewModeInline

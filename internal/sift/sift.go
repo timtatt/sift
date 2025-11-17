@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -31,28 +30,56 @@ func IsStdinTerminal() bool {
 	return (stat.Mode() & os.ModeCharDevice) != 0
 }
 
-func (s *sift) ScanStdin() error {
-	scanner := bufio.NewScanner(os.Stdin)
+func (s *sift) ScanStdin(ctx context.Context) error {
 
-	for scanner.Scan() {
-		var line tests.TestOutputLine
+	lines := make(chan []byte)
+	errChan := make(chan error)
 
-		err := json.Unmarshal(scanner.Bytes(), &line)
-		if err != nil {
-			// TODO: write to a temp dir log
-			return errors.New("unable to parse json input. ensure to use the `-json` flag when running go tests")
+	// scans in a separate channel to allow context cancellation
+	go func() {
+		scanner := bufio.NewScanner(os.Stdin)
+
+		for scanner.Scan() {
+			// without a copy, the underlying array changes whilst it is being processed by the consumer
+			lineCopy := make([]byte, len(scanner.Bytes()))
+			copy(lineCopy, scanner.Bytes())
+			lines <- lineCopy
 		}
 
-		s.model.testManager.AddTestOutput(line)
+		if err := scanner.Err(); err != nil {
+			errChan <- fmt.Errorf("failed to scan stdin: %w", err)
+		}
+
+		close(lines)
+		close(errChan)
+	}()
+
+	for {
+		select {
+		// exit early if context is cancelled
+		case <-ctx.Done():
+			return nil
+		case err := <-errChan:
+			return err
+		case line, ok := <-lines:
+
+			// channel closed, finished processing
+			if !ok {
+				s.model.endTime = time.Now()
+				return nil
+			}
+
+			var testOutputLine tests.TestOutputLine
+
+			err := json.Unmarshal(line, &testOutputLine)
+			if err != nil {
+				// TODO: write to a temp dir log
+				return fmt.Errorf("unable to parse json input. ensure to use the `-json` flag when running go tests: %s", err)
+			}
+
+			s.model.testManager.AddTestOutput(testOutputLine)
+		}
 	}
-
-	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("failed to scan stdin: %w", err)
-	}
-
-	s.model.endTime = time.Now()
-
-	return nil
 }
 
 type FrameMsg struct{}
@@ -129,7 +156,7 @@ func Run(ctx context.Context, opts SiftOptions) error {
 	}
 
 	g.Go(func() error {
-		if err := sift.ScanStdin(); err != nil {
+		if err := sift.ScanStdin(ctx); err != nil {
 			return err
 		}
 
@@ -157,6 +184,6 @@ func Run(ctx context.Context, opts SiftOptions) error {
 	}
 
 	m.quitting = false
-	fmt.Print(m.View())
+	fmt.Println(m.View())
 	return nil
 }

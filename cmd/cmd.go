@@ -28,4 +28,5 @@ func (c *CLI) Run() error {
 		NonInteractive: c.NonInteractive,
 		PrettifyLogs:   !c.RawLogs,
 	})
+
 }
