@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -54,6 +55,7 @@ func (s *sift) ScanStdin(ctx context.Context) error {
 		close(errChan)
 	}()
 
+out:
 	for {
 		select {
 		// exit early if context is cancelled
@@ -65,21 +67,28 @@ func (s *sift) ScanStdin(ctx context.Context) error {
 
 			// channel closed, finished processing
 			if !ok {
-				s.model.endTime = time.Now()
-				return nil
+				break out
 			}
 
 			var testOutputLine tests.TestOutputLine
 
 			err := json.Unmarshal(line, &testOutputLine)
 			if err != nil {
-				// TODO: write to a temp dir log
-				return fmt.Errorf("unable to parse json input. ensure to use the `-json` flag when running go tests: %s", err)
+				slog.ErrorContext(ctx, "unable to parse json input", "err", err)
+				return errors.New("unable to parse json input. ensure to use the `-json` flag when running go tests")
 			}
 
 			s.model.testManager.AddTestOutput(testOutputLine)
 		}
 	}
+
+	s.model.endTime = time.Now()
+
+	if s.model.testManager.GetTestCount() == 0 {
+		return errors.New("no tests received, ensure to specify a package to run `go test` with")
+	}
+
+	return nil
 }
 
 type FrameMsg struct{}

@@ -11,7 +11,7 @@ sift is a lightweight terminal UI for displaying Go test results. It allows deve
 ## Installation
 
 ```bash
-go install github.com/timtatt/sift@v0.11.0
+go install github.com/timtatt/sift@v0.12.1
 ```
 
 ## Try it out!
@@ -23,7 +23,7 @@ You can try a demo of sift with the sample tests provided in the `samples` folde
 git clone github.com/timtatt/sift.git
 
 # Run sift
-go test ./samples/... -v -json | sift
+go test ./samples/... -json | sift
 ```
 
 ## Usage
@@ -31,10 +31,10 @@ go test ./samples/... -v -json | sift
 `sift` works by consuming the verbose json output from the `go test` command. The easiest way to use it is to pipe `|` the output straight into `sift`
 
 ```bash
-go test {your-go-package} -v -json | sift
+go test {your-go-package} -json | sift
 
 # eg.
-go test ./... -v -json | sift
+go test ./... -json | sift
 ```
 
 ## Demo (v0.9.0)
@@ -53,13 +53,13 @@ go test ./... -v -json | sift
 
 ```bash
 # Run in non-interactive mode (inline output)
-go test ./... -v -json | sift -n
+go test ./... -json | sift -n
 
 # Enable debug view
-go test ./... -v -json | sift --debug
+go test ./... -json | sift --debug
 
 # Disable log prettification
-go test ./... -v -json | sift --raw
+go test ./... -json | sift --raw
 ```
 
 ### Keymaps
