@@ -1,3 +1,3 @@
 package sift
 
-var Version = "v0.12.1"
+var Version = "v0.12.2"
