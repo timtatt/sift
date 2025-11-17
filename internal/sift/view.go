@@ -1,6 +1,7 @@
 package sift
 
 import (
+	"errors"
 	"strings"
 	"time"
 
@@ -27,7 +28,7 @@ const (
 )
 
 type siftModel struct {
-	opts SiftOptions
+	opts ProgramOptions
 
 	testManager *tests.TestManager
 	testState   map[tests.TestReference]*testState
@@ -61,7 +62,17 @@ type cursor struct {
 	log  int // tracks the cursor log line
 }
 
-func NewSiftModel(opts SiftOptions) *siftModel {
+type SiftModelOptions struct {
+	ProgramOptions
+	TestManager *tests.TestManager
+}
+
+func NewSiftModel(opts SiftModelOptions) (*siftModel, error) {
+
+	if opts.TestManager == nil {
+		return nil, errors.New("missing test manager")
+	}
+
 	ti := textinput.New()
 	ti.Placeholder = "search for tests"
 	ti.PlaceholderStyle = styleSecondary
@@ -74,10 +85,8 @@ func NewSiftModel(opts SiftOptions) *siftModel {
 	}
 
 	return &siftModel{
-		opts: opts,
-		testManager: tests.NewTestManager(tests.TestManagerOpts{
-			ParseLogs: opts.PrettifyLogs,
-		}),
+		opts:           opts.ProgramOptions,
+		testManager:    opts.TestManager,
 		testState:      make(map[tests.TestReference]*testState),
 		autoToggleMode: false,
 		compileSpinner: spinner.New(spinner.WithSpinner(spinner.Dot)),
@@ -89,7 +98,7 @@ func NewSiftModel(opts SiftOptions) *siftModel {
 		},
 		searchInput: ti,
 		mode:        mode,
-	}
+	}, nil
 }
 
 // normalizeSearchQuery removes spaces from the search query since Go replaces

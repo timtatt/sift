@@ -1,11 +1,13 @@
 package sift
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/timtatt/sift/internal/tests"
 )
 
@@ -800,7 +802,14 @@ type testModelOpts struct {
 }
 
 func createTestModel(opts testModelOpts) *siftModel {
-	m := NewSiftModel(SiftOptions{})
+	m, err := NewSiftModel(SiftModelOptions{
+		TestManager: tests.NewTestManager(tests.TestManagerOpts{}),
+	})
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	m.autoToggleMode = opts.autoToggleMode
 
 	testCount := opts.testCount
@@ -947,7 +956,12 @@ func TestIsTestVisible_SpaceHandling(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			m := NewSiftModel(SiftOptions{})
+			m, err := NewSiftModel(SiftModelOptions{
+				TestManager: tests.NewTestManager(tests.TestManagerOpts{}),
+			})
+
+			require.NoError(t, err)
+
 			testRef := tests.TestReference{
 				Package: "test/package",
 				Test:    tt.testName,

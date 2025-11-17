@@ -1,8 +1,14 @@
 package tests
 
 import (
+	"bufio"
 	"cmp"
+	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"log/slog"
 	"slices"
 	"strings"
 	"sync"
@@ -215,6 +221,64 @@ func (tm *TestManager) GetLogs(testRef TestReference) []logparse.LogEntry {
 
 	if log, ok := tm.testLogs[testRef]; ok {
 		return log
+	}
+
+	return nil
+}
+
+func (tm *TestManager) ScanStdin(ctx context.Context, reader io.Reader) error {
+
+	lines := make(chan []byte)
+	errChan := make(chan error)
+
+	// scans in a separate channel to allow context cancellation
+	go func() {
+		scanner := bufio.NewScanner(reader)
+
+		for scanner.Scan() {
+			// without a copy, the underlying array changes whilst it is being processed by the consumer
+			lineCopy := make([]byte, len(scanner.Bytes()))
+			copy(lineCopy, scanner.Bytes())
+			lines <- lineCopy
+		}
+
+		if err := scanner.Err(); err != nil {
+			errChan <- fmt.Errorf("failed to scan stdin: %w", err)
+		}
+
+		close(lines)
+		close(errChan)
+	}()
+
+out:
+	for {
+		select {
+		// exit early if context is cancelled
+		case <-ctx.Done():
+			return nil
+		case err := <-errChan:
+			return err
+		case line, ok := <-lines:
+
+			// channel closed, finished processing
+			if !ok {
+				break out
+			}
+
+			var testOutputLine TestOutputLine
+
+			err := json.Unmarshal(line, &testOutputLine)
+			if err != nil {
+				slog.ErrorContext(ctx, "unable to parse json input", "err", err)
+				return errors.New("unable to parse json input. ensure to use the `-json` flag when running go tests")
+			}
+
+			tm.AddTestOutput(testOutputLine)
+		}
+	}
+
+	if tm.GetTestCount() == 0 {
+		return errors.New("no tests received, ensure to specify a package to run `go test` with")
 	}
 
 	return nil

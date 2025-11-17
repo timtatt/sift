@@ -23,7 +23,7 @@ func (c *CLI) Run() error {
 		os.Exit(0)
 	}
 
-	return sift.Run(ctx, sift.SiftOptions{
+	return sift.Run(ctx, sift.ProgramOptions{
 		Debug:          c.Debug,
 		NonInteractive: c.NonInteractive,
 		PrettifyLogs:   !c.RawLogs,
