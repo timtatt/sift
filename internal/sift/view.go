@@ -1,6 +1,7 @@
 package sift
 
 import (
+	"errors"
 	"strings"
 	"time"
 
@@ -27,7 +28,7 @@ const (
 )
 
 type siftModel struct {
-	opts SiftOptions
+	opts ProgramOptions
 
 	testManager *tests.TestManager
 	testState   map[tests.TestReference]*testState
@@ -61,7 +62,17 @@ type cursor struct {
 	log  int // tracks the cursor log line
 }
 
-func NewSiftModel(opts SiftOptions) *siftModel {
+type SiftModelOptions struct {
+	ProgramOptions
+	TestManager *tests.TestManager
+}
+
+func NewSiftModel(opts SiftModelOptions) (*siftModel, error) {
+
+	if opts.TestManager == nil {
+		return nil, errors.New("missing test manager")
+	}
+
 	ti := textinput.New()
 	ti.Placeholder = "search for tests"
 	ti.PlaceholderStyle = styleSecondary
@@ -74,10 +85,8 @@ func NewSiftModel(opts SiftOptions) *siftModel {
 	}
 
 	return &siftModel{
-		opts: opts,
-		testManager: tests.NewTestManager(tests.TestManagerOpts{
-			ParseLogs: opts.PrettifyLogs,
-		}),
+		opts:           opts.ProgramOptions,
+		testManager:    opts.TestManager,
 		testState:      make(map[tests.TestReference]*testState),
 		autoToggleMode: false,
 		compileSpinner: spinner.New(spinner.WithSpinner(spinner.Dot)),
@@ -89,7 +98,7 @@ func NewSiftModel(opts SiftOptions) *siftModel {
 		},
 		searchInput: ti,
 		mode:        mode,
-	}
+	}, nil
 }
 
 // normalizeSearchQuery removes spaces from the search query since Go replaces
@@ -452,6 +461,9 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if m.searchInput.Focused() {
 			switch {
+			case msg.String() == "ctrl+c":
+				m.quitting = true
+				return m, tea.Quit
 			case msg.String() == "esc":
 				// Exit search mode and clear query
 				m.searchInput.Blur()
@@ -575,6 +587,12 @@ func (m *siftModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case key.Matches(msg, keys.Help):
 			m.help.ShowAll = !m.help.ShowAll
+		case key.Matches(msg, keys.ForceQuit):
+			// ensure running inline mode for the final print
+			m.mode = viewModeInline
+			m.quitting = true
+
+			return m, nil
 		case key.Matches(msg, keys.Quit):
 			if m.mode == viewModeAlternate {
 				m.mode = viewModeInline

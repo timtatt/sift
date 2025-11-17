@@ -1,13 +1,12 @@
 package sift
 
 import (
-	"bufio"
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -15,39 +14,19 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type sift struct {
-	program *tea.Program
-	model   *siftModel
-}
-
-func (s *sift) ScanStdin() error {
-	scanner := bufio.NewScanner(os.Stdin)
-
-	for scanner.Scan() {
-		var line tests.TestOutputLine
-
-		err := json.Unmarshal(scanner.Bytes(), &line)
-		if err != nil {
-			// TODO: write to a temp dir log
-			return errors.New("unable to parse json input. ensure to use the `-json` flag when running go tests")
-		}
-
-		s.model.testManager.AddTestOutput(line)
+// IsStdinTerminal checks if stdin is a terminal (no piped input)
+func IsStdinTerminal() bool {
+	stat, err := os.Stdin.Stat()
+	if err != nil {
+		return false
 	}
-
-	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("failed to scan stdin: %w", err)
-	}
-
-	s.model.endTime = time.Now()
-
-	return nil
+	return (stat.Mode() & os.ModeCharDevice) != 0
 }
 
 type FrameMsg struct{}
 
 // sends a msg to bubbletea model on an interval to ensure the view is being updated according to framerate
-func (s *sift) Frame(ctx context.Context, tps int) {
+func FrameTicker(ctx context.Context, program *tea.Program, tps int) {
 	tick := time.NewTicker(time.Second / time.Duration(tps))
 	defer tick.Stop()
 
@@ -56,12 +35,12 @@ func (s *sift) Frame(ctx context.Context, tps int) {
 		case <-ctx.Done():
 			return
 		case <-tick.C:
-			s.program.Send(FrameMsg{})
+			program.Send(FrameMsg{})
 		}
 	}
 }
 
-type SiftOptions struct {
+type ProgramOptions struct {
 	Debug          bool
 	NonInteractive bool
 	PrettifyLogs   bool
@@ -83,7 +62,7 @@ func initLogging() error {
 	return nil
 }
 
-func Run(ctx context.Context, opts SiftOptions) error {
+func Run(ctx context.Context, opts ProgramOptions) error {
 
 	if opts.Debug {
 		if err := initLogging(); err != nil {
@@ -92,14 +71,25 @@ func Run(ctx context.Context, opts SiftOptions) error {
 		slog.DebugContext(ctx, "starting sift", "options", opts)
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
 	fps := 120
 
 	g, ctx := errgroup.WithContext(ctx)
 
-	m := NewSiftModel(opts)
+	testManager := tests.NewTestManager(tests.TestManagerOpts{
+		ParseLogs: opts.PrettifyLogs,
+	})
+
+	m, err := NewSiftModel(SiftModelOptions{
+		ProgramOptions: opts,
+		TestManager:    testManager,
+	})
+
+	if err != nil {
+		return fmt.Errorf("unable to create sift model: %w", err)
+	}
 
 	programOpts := []tea.ProgramOption{
 		tea.WithFPS(fps),
@@ -112,15 +102,12 @@ func Run(ctx context.Context, opts SiftOptions) error {
 
 	p := tea.NewProgram(m, programOpts...)
 
-	sift := &sift{
-		model:   m,
-		program: p,
-	}
-
 	g.Go(func() error {
-		if err := sift.ScanStdin(); err != nil {
+		if err := testManager.ScanStdin(ctx, os.Stdin); err != nil {
 			return err
 		}
+
+		m.endTime = time.Now()
 
 		return nil
 	})
@@ -135,17 +122,17 @@ func Run(ctx context.Context, opts SiftOptions) error {
 	})
 
 	g.Go(func() error {
-		sift.Frame(ctx, fps)
+		FrameTicker(ctx, p, fps)
 
 		return nil
 	})
 
-	err := g.Wait()
+	err = g.Wait()
 	if err != nil {
 		return err
 	}
 
 	m.quitting = false
-	fmt.Print(m.View())
+	fmt.Println(m.View())
 	return nil
 }

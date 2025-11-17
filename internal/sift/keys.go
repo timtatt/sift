@@ -24,6 +24,7 @@ type keyMap struct {
 	ClearSearch            key.Binding
 	Help                   key.Binding
 	Quit                   key.Binding
+	ForceQuit              key.Binding
 	ChangeMode             key.Binding
 }
 
@@ -131,8 +132,12 @@ var (
 			key.WithHelp("?", "toggle help"),
 		),
 		Quit: key.NewBinding(
-			key.WithKeys("q", "ctrl+c"),
+			key.WithKeys("q"),
 			key.WithHelp("q", "quit"),
+		),
+		ForceQuit: key.NewBinding(
+			key.WithKeys("ctrl+c"),
+			key.WithHelp("ctrl+c", "force quit"),
 		),
 	}
 )

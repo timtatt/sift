@@ -10,7 +10,7 @@ import (
 var (
 	colorGreen = lipgloss.AdaptiveColor{
 		Light: "#2D7F1E",
-		Dark:  "#5FD700",
+		Dark:  "#4b9c09",
 	}
 	colorRed = lipgloss.AdaptiveColor{
 		Light: "#C41E3A",
